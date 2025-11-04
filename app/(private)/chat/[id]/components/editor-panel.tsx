@@ -21,7 +21,7 @@ console.log(message);
   };
 
   return (
-    <div className="flex h-full flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-black">
+    <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <Tabs defaultValue="code" className="flex h-full flex-1 flex-col p-6">
         <TabsList className="w-fit">
           <TabsTrigger value="code">Code</TabsTrigger>
@@ -37,8 +37,8 @@ console.log(message);
         </TabsContent>
 
         <TabsContent value="preview" className="flex-1 mt-4">
-          <div className="flex h-full flex-col rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-zinc-600 dark:text-zinc-400">
+          <div className="flex h-full flex-col rounded-lg border border-border bg-card p-4">
+            <p className="text-muted-foreground">
               Preview à venir...
             </p>
             {/* TODO: Ajouter le preview ici */}

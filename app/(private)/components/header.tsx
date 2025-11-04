@@ -49,7 +49,7 @@ export function Header({
   userAvatar 
 }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between border-b border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <header className="flex items-center justify-between border-b border-border bg-card p-4">
       {/* Left side: Logo + Title */}
       <div className="flex items-center gap-4">
         <div className="flex items-center">
@@ -60,12 +60,12 @@ export function Header({
                 height={36}
                 className="dark:invert"
             />
-            <h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">alcentric</h1>
+            <h1 className="text-3xl font-semibold text-foreground">alcentric</h1>
         </div>
         {title && (
           <>
-            <div className="h-6 w-px bg-zinc-300 dark:bg-zinc-700" />
-            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            <div className="h-6 w-px bg-border" />
+            <h1 className="text-lg font-semibold text-foreground">
               {title}
             </h1>
           </>
@@ -99,7 +99,7 @@ export function Header({
             <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
               <Avatar>
                 <AvatarImage src={userAvatar} alt={userName} />
-                <AvatarFallback className="bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                <AvatarFallback className="bg-muted text-muted-foreground">
                   {userName.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>

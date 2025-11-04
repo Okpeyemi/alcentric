@@ -119,16 +119,16 @@ export function ChatPanel({ chatId }: ChatPanelProps) {
   };
 
   return (
-    <div className="flex h-full flex-1 flex-col overflow-hidden bg-white dark:bg-zinc-900">
+    <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: 0 }}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              <h3 className="text-lg font-semibold text-foreground">
                 Commencez une conversation
               </h3>
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Posez une question ou demandez de l'aide pour coder
               </p>
             </div>
@@ -146,7 +146,7 @@ export function ChatPanel({ chatId }: ChatPanelProps) {
                   className={`max-w-[80%] rounded-lg px-4 py-3 ${
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50'
+                      : 'bg-muted text-foreground'
                   }`}
                 >
                   <p className="whitespace-pre-wrap text-sm">{message.content}</p>
@@ -155,9 +155,9 @@ export function ChatPanel({ chatId }: ChatPanelProps) {
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-3 dark:bg-zinc-800">
+                <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3">
                   <Spinner className="h-4 w-4" />
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     En train d'écrire...
                   </p>
                 </div>
@@ -169,13 +169,13 @@ export function ChatPanel({ chatId }: ChatPanelProps) {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="border-t border-border bg-card p-4">
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Tapez votre message..."
-            className="flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
+            className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             disabled={isLoading}
           />
           <Button

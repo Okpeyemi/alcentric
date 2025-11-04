@@ -32,7 +32,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar activeMenu="chat" />
         
-        <main className="flex flex-1 bg-zinc-50 dark:bg-background">
+        <main className="flex flex-1 bg-background">
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={30} minSize={20} maxSize={60}>
               <ChatPanel chatId={id} />

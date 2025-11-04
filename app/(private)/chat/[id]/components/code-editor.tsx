@@ -25,12 +25,12 @@ export function CodeEditor({
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="relative h-full w-full overflow-hidden rounded-lg border border-border bg-card">
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-zinc-900">
+        <div className="absolute inset-0 flex items-center justify-center bg-card">
           <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900 dark:border-zinc-700 dark:border-t-zinc-50" />
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" />
+            <p className="text-sm text-muted-foreground">
               Chargement de l'éditeur...
             </p>
           </div>

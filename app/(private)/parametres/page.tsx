@@ -43,7 +43,7 @@ export default function ParametresPage() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar activeMenu="settings" />
         
-        <main className="flex-1 overflow-y-auto bg-zinc-50 p-8 dark:bg-background">
+        <main className="flex-1 overflow-y-auto bg-background p-8">
           <div className="mx-auto max-w-4xl space-y-6">
             {/* Informations utilisateur */}
             <Card>
@@ -109,7 +109,7 @@ export default function ParametresPage() {
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     Le modèle sélectionné sera utilisé pour toutes vos conversations
                   </p>
                 </div>

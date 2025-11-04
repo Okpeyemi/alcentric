@@ -33,26 +33,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-black">
-      <div className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-10 dark:bg-zinc-900">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
+      <div className="w-full max-w-xl space-y-4 rounded-2xl bg-card p-10">
         {/* Logo */}
-        <div className="flex justify-center">
+        <div className="flex items-center justify-center">
           <Image
-            src="/alcentric-black.png"
+            src="/alcentric-icon-default.png"
             alt="Alcentric Logo"
-            width={200}
+            width={60}
             height={60}
             priority
             className="dark:invert"
           />
+          <h1 className="text-5xl font-bold tracking-tight text-foreground">alcentric</h1>
         </div>
 
         {/* Texte de bienvenue */}
         <div className="space-y-3 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Bienvenue
           </h1>
-          <p className="text-base text-zinc-600 dark:text-zinc-400">
+          <p className="text-base text-muted-foreground">
             Connectez-vous avec votre compte GitHub pour continuer
           </p>
         </div>
