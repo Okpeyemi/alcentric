@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alcentric</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="container">
+    <!-- État de chargement -->
+    <div id="loading" class="state">
+      <div class="spinner"></div>
+      <p>Chargement...</p>
+    </div>
+
+    <!-- Formulaire de connexion -->
+    <div id="login-form" class="state hidden">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+          <path d="M2 12h20"/>
+        </svg>
+        <h1>Alcentric</h1>
+      </div>
+      
+      <form id="auth-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="nom@exemple.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        <div id="error-message" class="error hidden"></div>
+        <button type="submit" id="submit-btn" class="btn-primary">
+          Se connecter
+        </button>
+      </form>
+      
+      <p class="switch-text">
+        Pas de compte ? 
+        <a href="#" id="switch-to-register">S'inscrire</a>
+      </p>
+    </div>
+
+    <!-- Formulaire d'inscription -->
+    <div id="register-form" class="state hidden">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+          <path d="M2 12h20"/>
+        </svg>
+        <h1>Alcentric</h1>
+      </div>
+      
+      <form id="register-auth-form">
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" placeholder="nom@exemple.com" required>
+        </div>
+        <div class="form-group">
+          <label for="register-password">Mot de passe</label>
+          <input type="password" id="register-password" placeholder="••••••••" required>
+        </div>
+        <div class="form-group">
+          <label for="register-confirm">Confirmer</label>
+          <input type="password" id="register-confirm" placeholder="••••••••" required>
+        </div>
+        <div id="register-error-message" class="error hidden"></div>
+        <div id="register-success-message" class="success hidden"></div>
+        <button type="submit" id="register-submit-btn" class="btn-primary">
+          S'inscrire
+        </button>
+      </form>
+      
+      <p class="switch-text">
+        Déjà un compte ? 
+        <a href="#" id="switch-to-login">Se connecter</a>
+      </p>
+    </div>
+
+    <!-- État connecté - Contenu principal -->
+    <div id="logged-in" class="state hidden">
+      <div class="header">
+        <div class="header-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+            <path d="M2 12h20"/>
+          </svg>
+          <span>Alcentric</span>
+        </div>
+        <button id="logout-btn" class="btn-icon" title="Se déconnecter">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="content">
+        <div class="user-info">
+          <div class="avatar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="5"/>
+              <path d="M20 21a8 8 0 1 0-16 0"/>
+            </svg>
+          </div>
+          <p id="user-email" class="email"></p>
+        </div>
+
+        <div class="main-content">
+          <p class="welcome">Bienvenue sur Alcentric !</p>
+          <p class="description">Le contenu de ce panel sera personnalisé selon vos besoins.</p>
+          
+          <div class="placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18"/>
+              <path d="M9 21V9"/>
+            </svg>
+            <span>Zone de contenu</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="supabase.min.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
