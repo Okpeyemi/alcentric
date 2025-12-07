@@ -1,6 +1,11 @@
-// Configuration Supabase
+// Configuration
 const SUPABASE_URL = 'https://mijsxpskfzapjjyajrtm.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1panN4cHNrZnphcGpqeWFqcnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMDYxMTYsImV4cCI6MjA4MDY4MjExNn0.RZnZ7R1aWj4OhsPsbzD1OPLbsoiNVhbrU3IpP9us_lM';
+const API_BASE_URL = 'http://localhost:3000';
+
+// État du chat
+let chatMessages = [];
+let isStreaming = false;
 
 // Initialiser Supabase
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -51,10 +56,14 @@ const registerSubmitBtn = document.getElementById('register-submit-btn');
 const errorMessage = document.getElementById('error-message');
 const registerErrorMessage = document.getElementById('register-error-message');
 const registerSuccessMessage = document.getElementById('register-success-message');
-const userEmailEl = document.getElementById('user-email');
 const logoutBtn = document.getElementById('logout-btn');
 const switchToRegister = document.getElementById('switch-to-register');
 const switchToLogin = document.getElementById('switch-to-login');
+const chatMessagesEl = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
 
 // Fonctions utilitaires
 function showState(state) {
@@ -78,6 +87,114 @@ function hideError(element) {
   element.classList.add('hidden');
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function scrollToBottom() {
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+function createMessageElement(role, content) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${role}`;
+  const avatarSvg = role === 'assistant' 
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`;
+  messageDiv.innerHTML = `<div class="message-avatar">${avatarSvg}</div><div class="message-content"><p>${escapeHtml(content)}</p></div>`;
+  return messageDiv;
+}
+
+function createTypingIndicator() {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message assistant';
+  messageDiv.id = 'typing-indicator';
+  messageDiv.innerHTML = `<div class="message-avatar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div><div class="message-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+  return messageDiv;
+}
+
+async function sendMessage(content) {
+  if (isStreaming || !content.trim()) return;
+  isStreaming = true;
+  sendBtn.disabled = true;
+  chatInput.disabled = true;
+  
+  chatMessages.push({ role: 'user', content });
+  chatMessagesEl.appendChild(createMessageElement('user', content));
+  scrollToBottom();
+  
+  const typingEl = createTypingIndicator();
+  chatMessagesEl.appendChild(typingEl);
+  scrollToBottom();
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatMessages }),
+    });
+    
+    if (!response.ok) throw new Error('Erreur serveur');
+    typingEl.remove();
+    
+    const assistantMessageEl = createMessageElement('assistant', '');
+    const contentEl = assistantMessageEl.querySelector('.message-content p');
+    chatMessagesEl.appendChild(assistantMessageEl);
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let assistantContent = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'text') {
+              assistantContent += data.content;
+              contentEl.innerHTML = escapeHtml(assistantContent);
+              scrollToBottom();
+            }
+          } catch (e) {}
+        }
+      }
+    }
+    chatMessages.push({ role: 'assistant', content: assistantContent });
+  } catch (error) {
+    typingEl.remove();
+    const errorEl = createMessageElement('assistant', 'Erreur de connexion. Vérifiez que le serveur est lancé.');
+    errorEl.classList.add('error');
+    chatMessagesEl.appendChild(errorEl);
+    scrollToBottom();
+  }
+  
+  isStreaming = false;
+  sendBtn.disabled = false;
+  chatInput.disabled = false;
+  chatInput.focus();
+  updateSendButton();
+}
+
+function resetChat() {
+  chatMessages = [];
+  chatMessagesEl.innerHTML = `<div class="message assistant"><div class="message-avatar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div><div class="message-content"><p>Bonjour ! Je suis Alcentric, votre assistant IA. Comment puis-je vous aider ?</p></div></div>`;
+}
+
+function updateSendButton() {
+  sendBtn.disabled = !chatInput.value.trim() || isStreaming;
+}
+
+function autoResize() {
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+}
+
 // Vérifier l'état de connexion
 async function checkAuth() {
   showState('loading');
@@ -86,7 +203,6 @@ async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
-      userEmailEl.textContent = session.user.email;
       showState('logged-in');
     } else {
       showState('login');
@@ -116,7 +232,6 @@ authForm.addEventListener('submit', async (e) => {
     if (error) {
       showError(errorMessage, error.message);
     } else {
-      userEmailEl.textContent = data.user.email;
       showState('logged-in');
     }
   } catch (error) {
@@ -177,6 +292,7 @@ registerAuthForm.addEventListener('submit', async (e) => {
 // Déconnexion
 logoutBtn.addEventListener('click', async () => {
   await supabase.auth.signOut();
+  resetChat();
   showState('login');
 });
 
@@ -190,6 +306,31 @@ switchToLogin.addEventListener('click', (e) => {
   e.preventDefault();
   showState('login');
 });
+
+// Chat events
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const content = chatInput.value.trim();
+  if (content) {
+    chatInput.value = '';
+    autoResize();
+    sendMessage(content);
+  }
+});
+
+chatInput.addEventListener('input', () => {
+  updateSendButton();
+  autoResize();
+});
+
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    chatForm.dispatchEvent(new Event('submit'));
+  }
+});
+
+newChatBtn.addEventListener('click', resetChat);
 
 // Initialisation
 checkAuth();
