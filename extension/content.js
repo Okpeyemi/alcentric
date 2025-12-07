@@ -33,6 +33,16 @@ function handleButtonClick() {
   chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
 }
 
+// Écouter les événements d'authentification depuis le site
+window.addEventListener('alcentric-auth-change', (event) => {
+  const { isLoggedIn } = event.detail;
+  // Notifier le background script qui relayera au side panel
+  chrome.runtime.sendMessage({ 
+    type: 'AUTH_STATE_CHANGED', 
+    isLoggedIn 
+  });
+});
+
 // Initialisation - afficher le bouton directement
 function init() {
   createButton();

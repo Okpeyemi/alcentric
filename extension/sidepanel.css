@@ -65,6 +65,54 @@ body {
   font-weight: 600;
 }
 
+/* Login prompt */
+#login-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+.login-prompt-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 280px;
+}
+
+.login-prompt-text {
+  font-size: 14px;
+  color: #737373;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+#login-prompt .btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+}
+
+.login-prompt-hint {
+  font-size: 13px;
+  color: #a3a3a3;
+  margin-top: 16px;
+}
+
+.login-prompt-hint a {
+  color: #0a0a0a;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-prompt-hint a:hover {
+  text-decoration: underline;
+}
+
 /* Forms */
 #login-form, #register-form {
   padding: 24px;

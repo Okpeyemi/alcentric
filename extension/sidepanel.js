@@ -1,64 +1,20 @@
 // Configuration
-const SUPABASE_URL = 'https://mijsxpskfzapjjyajrtm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1panN4cHNrZnphcGpqeWFqcnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMDYxMTYsImV4cCI6MjA4MDY4MjExNn0.RZnZ7R1aWj4OhsPsbzD1OPLbsoiNVhbrU3IpP9us_lM';
 const API_BASE_URL = 'http://localhost:3000';
+const SESSION_CHECK_INTERVAL = 30000; // Vérifier la session toutes les 30 secondes
 
-// État du chat
+// État
 let chatMessages = [];
 let isStreaming = false;
-
-// Initialiser Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    storage: {
-      getItem: (key) => {
-        return new Promise((resolve) => {
-          chrome.storage.local.get([key], (result) => {
-            resolve(result[key] || null);
-          });
-        });
-      },
-      setItem: (key, value) => {
-        return new Promise((resolve) => {
-          chrome.storage.local.set({ [key]: value }, () => {
-            resolve();
-          });
-        });
-      },
-      removeItem: (key) => {
-        return new Promise((resolve) => {
-          chrome.storage.local.remove([key], () => {
-            resolve();
-          });
-        });
-      }
-    },
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false
-  }
-});
+let currentUser = null;
+let sessionCheckTimer = null;
 
 // Éléments DOM
 const loadingEl = document.getElementById('loading');
-const loginFormEl = document.getElementById('login-form');
-const registerFormEl = document.getElementById('register-form');
+const loginPromptEl = document.getElementById('login-prompt');
 const loggedInEl = document.getElementById('logged-in');
-const authForm = document.getElementById('auth-form');
-const registerAuthForm = document.getElementById('register-auth-form');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
-const registerEmailInput = document.getElementById('register-email');
-const registerPasswordInput = document.getElementById('register-password');
-const registerConfirmInput = document.getElementById('register-confirm');
-const submitBtn = document.getElementById('submit-btn');
-const registerSubmitBtn = document.getElementById('register-submit-btn');
-const errorMessage = document.getElementById('error-message');
-const registerErrorMessage = document.getElementById('register-error-message');
-const registerSuccessMessage = document.getElementById('register-success-message');
+const openLoginBtn = document.getElementById('open-login-btn');
+const openRegisterLink = document.getElementById('open-register-link');
 const logoutBtn = document.getElementById('logout-btn');
-const switchToRegister = document.getElementById('switch-to-register');
-const switchToLogin = document.getElementById('switch-to-login');
 const chatMessagesEl = document.getElementById('chat-messages');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
@@ -71,23 +27,12 @@ const userEmailEl = document.getElementById('user-email');
 // Fonctions utilitaires
 function showState(state) {
   loadingEl.classList.add('hidden');
-  loginFormEl.classList.add('hidden');
-  registerFormEl.classList.add('hidden');
+  loginPromptEl.classList.add('hidden');
   loggedInEl.classList.add('hidden');
   
   if (state === 'loading') loadingEl.classList.remove('hidden');
-  else if (state === 'login') loginFormEl.classList.remove('hidden');
-  else if (state === 'register') registerFormEl.classList.remove('hidden');
+  else if (state === 'login') loginPromptEl.classList.remove('hidden');
   else if (state === 'logged-in') loggedInEl.classList.remove('hidden');
-}
-
-function showError(element, message) {
-  element.textContent = message;
-  element.classList.remove('hidden');
-}
-
-function hideError(element) {
-  element.classList.add('hidden');
 }
 
 function escapeHtml(text) {
@@ -198,118 +143,94 @@ function autoResize() {
   chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
 }
 
+// Récupérer les cookies du site
+async function getSiteCookies() {
+  return new Promise((resolve) => {
+    chrome.cookies.getAll({ url: API_BASE_URL }, (cookies) => {
+      resolve(cookies);
+    });
+  });
+}
+
+// Vérifier la session via l'API du site
+async function checkSession() {
+  try {
+    // Récupérer les cookies et les formater
+    const cookies = await getSiteCookies();
+    const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+    
+    const response = await fetch(`${API_BASE_URL}/api/auth/session`, {
+      headers: {
+        'Cookie': cookieHeader
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Session check failed');
+    }
+    
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error('Session check error:', error);
+    return null;
+  }
+}
+
 // Vérifier l'état de connexion
 async function checkAuth() {
   showState('loading');
   
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
-      userEmailEl.textContent = session.user.email;
-      showState('logged-in');
-    } else {
-      showState('login');
-    }
-  } catch (error) {
-    console.error('Erreur auth:', error);
+  const user = await checkSession();
+  
+  if (user) {
+    currentUser = user;
+    userEmailEl.textContent = user.email;
+    showState('logged-in');
+    startSessionCheck();
+  } else {
+    currentUser = null;
     showState('login');
+    stopSessionCheck();
   }
 }
 
-// Connexion
-authForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  hideError(errorMessage);
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Connexion...';
-  
-  const email = emailInput.value;
-  const password = passwordInput.value;
-  
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
-      showError(errorMessage, error.message);
-    } else {
-      userEmailEl.textContent = data.user.email;
-      showState('logged-in');
+// Vérification périodique de la session
+function startSessionCheck() {
+  stopSessionCheck();
+  sessionCheckTimer = setInterval(async () => {
+    const user = await checkSession();
+    if (!user && currentUser) {
+      // L'utilisateur s'est déconnecté du site
+      currentUser = null;
+      resetChat();
+      showState('login');
+      stopSessionCheck();
     }
-  } catch (error) {
-    showError(errorMessage, 'Une erreur est survenue');
+  }, SESSION_CHECK_INTERVAL);
+}
+
+function stopSessionCheck() {
+  if (sessionCheckTimer) {
+    clearInterval(sessionCheckTimer);
+    sessionCheckTimer = null;
   }
-  
-  submitBtn.disabled = false;
-  submitBtn.textContent = 'Se connecter';
+}
+
+// Ouvrir le site pour se connecter
+openLoginBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: `${API_BASE_URL}/login` });
 });
 
-// Inscription
-registerAuthForm.addEventListener('submit', async (e) => {
+openRegisterLink.addEventListener('click', (e) => {
   e.preventDefault();
-  hideError(registerErrorMessage);
-  registerSuccessMessage.classList.add('hidden');
-  registerSubmitBtn.disabled = true;
-  registerSubmitBtn.textContent = 'Inscription...';
-  
-  const email = registerEmailInput.value;
-  const password = registerPasswordInput.value;
-  const confirm = registerConfirmInput.value;
-  
-  if (password !== confirm) {
-    showError(registerErrorMessage, 'Les mots de passe ne correspondent pas');
-    registerSubmitBtn.disabled = false;
-    registerSubmitBtn.textContent = "S'inscrire";
-    return;
-  }
-  
-  if (password.length < 6) {
-    showError(registerErrorMessage, 'Le mot de passe doit contenir au moins 6 caractères');
-    registerSubmitBtn.disabled = false;
-    registerSubmitBtn.textContent = "S'inscrire";
-    return;
-  }
-  
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password
-    });
-    
-    if (error) {
-      showError(registerErrorMessage, error.message);
-    } else {
-      registerSuccessMessage.textContent = 'Inscription réussie ! Vérifiez votre email pour confirmer votre compte.';
-      registerSuccessMessage.classList.remove('hidden');
-      registerAuthForm.reset();
-    }
-  } catch (error) {
-    showError(registerErrorMessage, 'Une erreur est survenue');
-  }
-  
-  registerSubmitBtn.disabled = false;
-  registerSubmitBtn.textContent = "S'inscrire";
+  chrome.tabs.create({ url: `${API_BASE_URL}/register` });
 });
 
-// Déconnexion
-logoutBtn.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  resetChat();
-  showState('login');
-});
-
-// Switch entre login et register
-switchToRegister.addEventListener('click', (e) => {
-  e.preventDefault();
-  showState('register');
-});
-
-switchToLogin.addEventListener('click', (e) => {
-  e.preventDefault();
-  showState('login');
+// Déconnexion - ouvre le site pour se déconnecter
+logoutBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: `${API_BASE_URL}` });
+  // La vérification périodique détectera la déconnexion
 });
 
 // Chat events
@@ -347,6 +268,14 @@ profileBtn.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
   if (!profileMenu.contains(e.target) && e.target !== profileBtn) {
     profileMenu.classList.add('hidden');
+  }
+});
+
+// Écouter les messages du background (changement d'auth depuis le site)
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'AUTH_STATE_CHANGED') {
+    // Revérifier l'authentification immédiatement
+    checkAuth();
   }
 });
 
