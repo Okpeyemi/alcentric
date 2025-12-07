@@ -347,6 +347,8 @@ form {
 
 .chat-input {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   border: none;
   background: transparent;
   font-size: 14px;
@@ -355,6 +357,7 @@ form {
   outline: none;
   max-height: 120px;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .chat-input::placeholder {
