@@ -393,3 +393,91 @@ form {
   background: #fef2f2;
   color: #dc2626;
 }
+
+/* Profile dropdown */
+.profile-dropdown {
+  position: relative;
+}
+
+.profile-btn {
+  border-radius: 50%;
+}
+
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e5e5;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.profile-menu.hidden {
+  display: none;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  background: #f5f5f5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #737373;
+  flex-shrink: 0;
+}
+
+.profile-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-email {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0a0a0a;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-divider {
+  height: 1px;
+  background: #e5e5e5;
+}
+
+.profile-logout {
+  display: flex;
+  align-items: center;
+  /* justify-content: center; */
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.profile-logout:hover {
+  background: #fef2f2;
+}
+
+.profile-logout svg {
+  flex-shrink: 0;
+}

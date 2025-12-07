@@ -64,6 +64,9 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
+const profileBtn = document.getElementById('profile-btn');
+const profileMenu = document.getElementById('profile-menu');
+const userEmailEl = document.getElementById('user-email');
 
 // Fonctions utilitaires
 function showState(state) {
@@ -203,6 +206,7 @@ async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
+      userEmailEl.textContent = session.user.email;
       showState('logged-in');
     } else {
       showState('login');
@@ -232,6 +236,7 @@ authForm.addEventListener('submit', async (e) => {
     if (error) {
       showError(errorMessage, error.message);
     } else {
+      userEmailEl.textContent = data.user.email;
       showState('logged-in');
     }
   } catch (error) {
@@ -331,6 +336,19 @@ chatInput.addEventListener('keydown', (e) => {
 });
 
 newChatBtn.addEventListener('click', resetChat);
+
+// Profile dropdown
+profileBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  profileMenu.classList.toggle('hidden');
+});
+
+// Fermer le dropdown en cliquant ailleurs
+document.addEventListener('click', (e) => {
+  if (!profileMenu.contains(e.target) && e.target !== profileBtn) {
+    profileMenu.classList.add('hidden');
+  }
+});
 
 // Initialisation
 checkAuth();
