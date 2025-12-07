@@ -1,0 +1,187 @@
+/* Bouton flottant Alcentric */
+#alcentric-floating-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #0a0a0a 0%, #262626 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(10, 10, 10, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 2147483647;
+  animation: alcentric-pulse 2s infinite;
+}
+
+#alcentric-floating-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  animation: none;
+}
+
+#alcentric-floating-button:active {
+  transform: scale(0.95);
+}
+
+#alcentric-floating-button svg {
+  color: #ffffff;
+  width: 24px;
+  height: 24px;
+}
+
+@keyframes alcentric-pulse {
+  0% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(10, 10, 10, 0.4);
+  }
+  70% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 10px rgba(10, 10, 10, 0);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(10, 10, 10, 0);
+  }
+}
+
+/* Notification Alcentric */
+#alcentric-notification {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  background: #0a0a0a;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 2147483647;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#alcentric-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Bouton décalé quand panel ouvert */
+#alcentric-floating-button.shifted {
+  right: 404px;
+}
+
+/* Panel style DevTools */
+#alcentric-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100vh;
+  background: #f3f3f3;
+  border-left: 1px solid #cacaca;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  transform: translateX(100%);
+  transition: transform 0.15s ease-out;
+}
+
+#alcentric-panel.open {
+  transform: translateX(0);
+}
+
+/* Header du panel - style DevTools */
+.alcentric-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  height: 32px;
+  min-height: 32px;
+  background: #f3f3f3;
+  border-bottom: 1px solid #cacaca;
+}
+
+.alcentric-panel-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #333;
+}
+
+.alcentric-panel-logo svg {
+  color: #333;
+}
+
+.alcentric-panel-logo span {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.alcentric-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #5f5f5f;
+  transition: background 0.1s, color 0.1s;
+}
+
+.alcentric-panel-close:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* Contenu du panel */
+.alcentric-panel-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.alcentric-panel-welcome {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.alcentric-panel-description {
+  font-size: 12px;
+  color: #5f5f5f;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.alcentric-panel-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  border: 1px dashed #ccc;
+  color: #888;
+}
+
+.alcentric-panel-placeholder span {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
