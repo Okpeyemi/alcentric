@@ -7,6 +7,7 @@ let chatMessages = [];
 let isStreaming = false;
 let currentUser = null;
 let sessionCheckTimer = null;
+let currentPageContext = null; // Contexte de la page actuelle
 
 // Éléments DOM
 const loadingEl = document.getElementById('loading');
@@ -63,13 +64,41 @@ function createTypingIndicator() {
   return messageDiv;
 }
 
+// Récupérer le contexte de la page active via le background script
+async function getPageContext() {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_ACTIVE_TAB_CONTENT' }, (response) => {
+      if (response?.success) {
+        resolve(response.data);
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+// Récupérer le texte sélectionné
+async function getSelectedText() {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_SELECTED_TEXT' }, (response) => {
+      if (response?.success && response.data) {
+        resolve(response.data);
+      } else {
+        resolve('');
+      }
+    });
+  });
+}
+
 async function sendMessage(content) {
   if (isStreaming || !content.trim()) return;
   isStreaming = true;
   sendBtn.disabled = true;
   chatInput.disabled = true;
   
-  chatMessages.push({ role: 'user', content });
+  // Ajouter le message utilisateur à l'historique AVANT d'envoyer
+  const userMessage = { role: 'user', content: content.trim() };
+  chatMessages.push(userMessage);
   chatMessagesEl.appendChild(createMessageElement('user', content));
   scrollToBottom();
   
@@ -77,48 +106,150 @@ async function sendMessage(content) {
   chatMessagesEl.appendChild(typingEl);
   scrollToBottom();
   
+  // Préparer le message assistant pour la réponse
+  let assistantContent = '';
+  let assistantMessageEl = null;
+  let contentEl = null;
+  let responseReceived = false;
+  
   try {
+    // Récupérer le contexte de la page actuelle
+    const pageContext = await getPageContext();
+    const selectedText = await getSelectedText();
+    
+    // Préparer le contexte à envoyer à l'API
+    const context = {
+      pageContext: pageContext,
+      selectedText: selectedText
+    };
+    
+    // Créer une copie des messages pour l'API (éviter les modifications pendant l'envoi)
+    const messagesToSend = [...chatMessages];
+    
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: chatMessages }),
+      body: JSON.stringify({ messages: messagesToSend, context }),
     });
     
-    if (!response.ok) throw new Error('Erreur serveur');
+    if (!response.ok) {
+      throw new Error(`Erreur serveur: ${response.status}`);
+    }
+    
     typingEl.remove();
     
-    const assistantMessageEl = createMessageElement('assistant', '');
-    const contentEl = assistantMessageEl.querySelector('.message-content p');
+    // Créer l'élément de message assistant
+    assistantMessageEl = createMessageElement('assistant', '');
+    contentEl = assistantMessageEl.querySelector('.message-content p');
     chatMessagesEl.appendChild(assistantMessageEl);
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let assistantContent = '';
+    let buffer = ''; // Buffer pour gérer les chunks fragmentés
     
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+      
+      // Ajouter au buffer et traiter
+      buffer += decoder.decode(value, { stream: true });
+      
+      // Traiter les lignes complètes
+      const lines = buffer.split('\n');
+      // Garder la dernière ligne potentiellement incomplète dans le buffer
+      buffer = lines.pop() || '';
+      
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('data: ')) {
           try {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === 'text') {
-              assistantContent += data.content;
-              contentEl.innerHTML = escapeHtml(assistantContent);
-              scrollToBottom();
+            const jsonStr = trimmedLine.slice(6);
+            if (jsonStr) {
+              const data = JSON.parse(jsonStr);
+              
+              if (data.type === 'text' && data.content) {
+                assistantContent += data.content;
+                responseReceived = true;
+                if (contentEl) {
+                  contentEl.innerHTML = escapeHtml(assistantContent);
+                  scrollToBottom();
+                }
+              } else if (data.type === 'error') {
+                console.error('API Error:', data.content);
+                if (!responseReceived) {
+                  assistantContent = data.content || 'Une erreur est survenue.';
+                  if (contentEl) {
+                    contentEl.innerHTML = escapeHtml(assistantContent);
+                  }
+                }
+              }
+              // 'done' est géré par la fin du stream
             }
-          } catch (e) {}
+          } catch (parseError) {
+            // Ignorer les erreurs de parsing silencieusement
+            console.debug('Parse error:', parseError);
+          }
         }
       }
     }
-    chatMessages.push({ role: 'assistant', content: assistantContent });
+    
+    // Traiter le reste du buffer
+    if (buffer.trim().startsWith('data: ')) {
+      try {
+        const data = JSON.parse(buffer.trim().slice(6));
+        if (data.type === 'text' && data.content) {
+          assistantContent += data.content;
+          responseReceived = true;
+          if (contentEl) {
+            contentEl.innerHTML = escapeHtml(assistantContent);
+          }
+        }
+      } catch (e) {}
+    }
+    
+    // Ajouter la réponse de l'assistant à l'historique seulement si on a reçu du contenu
+    if (assistantContent.trim()) {
+      chatMessages.push({ role: 'assistant', content: assistantContent });
+    } else {
+      // Si pas de contenu, afficher un message par défaut et l'ajouter à l'historique
+      assistantContent = "Je n'ai pas pu générer de réponse. Pouvez-vous reformuler votre question ?";
+      if (contentEl) {
+        contentEl.innerHTML = escapeHtml(assistantContent);
+      }
+      chatMessages.push({ role: 'assistant', content: assistantContent });
+    }
+    
   } catch (error) {
-    typingEl.remove();
-    const errorEl = createMessageElement('assistant', 'Erreur de connexion. Vérifiez que le serveur est lancé.');
-    errorEl.classList.add('error');
-    chatMessagesEl.appendChild(errorEl);
+    console.error('Send message error:', error);
+    
+    // Retirer l'indicateur de frappe s'il est encore présent
+    if (typingEl.parentNode) {
+      typingEl.remove();
+    }
+    
+    // Si on avait commencé à afficher une réponse, la garder
+    if (assistantContent.trim()) {
+      chatMessages.push({ role: 'assistant', content: assistantContent });
+    } else {
+      // Sinon afficher une erreur
+      const errorMessage = 'Erreur de connexion. Vérifiez que le serveur est lancé.';
+      
+      if (assistantMessageEl && contentEl) {
+        contentEl.innerHTML = escapeHtml(errorMessage);
+        assistantMessageEl.classList.add('error');
+      } else {
+        const errorEl = createMessageElement('assistant', errorMessage);
+        errorEl.classList.add('error');
+        chatMessagesEl.appendChild(errorEl);
+      }
+      
+      // Retirer le dernier message utilisateur de l'historique en cas d'échec total
+      // pour éviter un historique incohérent
+      if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1].role === 'user') {
+        chatMessages.pop();
+      }
+    }
+    
     scrollToBottom();
   }
   
