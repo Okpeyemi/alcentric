@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Alcentric",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Extension Alcentric - Votre assistant sur toutes les pages web",
   "permissions": [
     "storage",
     "activeTab",
     "tabs",
     "sidePanel",
-    "cookies"
+    "cookies",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"

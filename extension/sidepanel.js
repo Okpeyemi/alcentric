@@ -1,4 +1,4 @@
-// Configuration
+                                                                                                                                                                                                                                                                                                                                                                                                                                            // Configuration
 const API_BASE_URL = 'http://localhost:3000';
 const SESSION_CHECK_INTERVAL = 30000; // Vérifier la session toutes les 30 secondes
 
@@ -21,7 +21,7 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
-const profileBtn = document.getElementById('profile-btn');
+const profileBtn = document.getElementById('profile-btn');                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
 const profileMenu = document.getElementById('profile-menu');
 const userEmailEl = document.getElementById('user-email');
 
@@ -77,6 +77,119 @@ async function getPageContext() {
   });
 }
 
+// Vérifier si la page actuelle est un PDF
+async function checkIfPdf() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        const url = tabs[0].url || '';
+        const title = tabs[0].title || '';
+        const isPdf = url.toLowerCase().endsWith('.pdf') || 
+                      url.includes('blob:') && title.toLowerCase().includes('.pdf') ||
+                      document.contentType === 'application/pdf';
+        resolve({ isPdf, url, title });
+      } else {
+        resolve({ isPdf: false, url: '', title: '' });
+      }
+    });
+  });
+}
+
+// Extraire le contenu d'un PDF via l'API serveur
+async function extractPdfContent(pdfUrl) {
+  console.log('[Alcentric] Extracting PDF content via API:', pdfUrl);
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/extract-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: pdfUrl })
+    });
+    
+    const result = await response.json();
+    console.log('[Alcentric] PDF extraction response:', result);
+    return result;
+  } catch (error) {
+    console.error('[Alcentric] PDF extraction error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Récupérer le contexte complet (page normale ou PDF)
+async function getFullContext() {
+  // Vérifier si c'est un PDF
+  const pdfCheck = await checkIfPdf();
+  
+  if (pdfCheck.isPdf) {
+    console.log('[Alcentric] PDF detected, extracting content from:', pdfCheck.url);
+    
+    // Extraire le contenu du PDF via l'API serveur
+    const pdfResult = await extractPdfContent(pdfCheck.url);
+    
+    if (pdfResult?.success) {
+      // Construire un contexte de page à partir du PDF
+      return {
+        pageContext: {
+          metadata: {
+            url: pdfResult.url,
+            title: pdfResult.metadata?.title || pdfCheck.title || 'Document PDF',
+            description: `PDF de ${pdfResult.numPages} pages`,
+            keywords: '',
+            language: '',
+            domain: new URL(pdfResult.url).hostname
+          },
+          content: pdfResult.fullText,
+          pdfInfo: {
+            isPdfPage: true,
+            numPages: pdfResult.numPages,
+            extractedPages: pdfResult.extractedPages,
+            metadata: pdfResult.metadata,
+            textLength: pdfResult.textLength
+          },
+          interactiveElements: [],
+          formFields: [],
+          images: [],
+          videos: [],
+          timestamp: new Date().toISOString()
+        },
+        selectedText: ''
+      };
+    } else {
+      console.log('[Alcentric] PDF extraction failed:', pdfResult?.error);
+      // Retourner un contexte minimal avec l'erreur
+      return {
+        pageContext: {
+          metadata: {
+            url: pdfCheck.url,
+            title: pdfCheck.title || 'Document PDF',
+            description: 'PDF - extraction impossible',
+            keywords: '',
+            language: '',
+            domain: pdfCheck.url ? new URL(pdfCheck.url).hostname : ''
+          },
+          content: `[Ce document est un PDF. L'extraction du texte a échoué: ${pdfResult?.error || 'erreur inconnue'}]`,
+          pdfInfo: {
+            isPdfPage: true,
+            extractionFailed: true,
+            error: pdfResult?.error
+          },
+          timestamp: new Date().toISOString()
+        },
+        selectedText: ''
+      };
+    }
+  }
+  
+  // Page normale - utiliser la méthode standard
+  const pageContext = await getPageContext();
+  const selectedText = await getSelectedText();
+  
+  return {
+    pageContext,
+    selectedText
+  };
+}
+
 // Récupérer le texte sélectionné
 async function getSelectedText() {
   return new Promise((resolve) => {
@@ -89,6 +202,47 @@ async function getSelectedText() {
     });
   });
 }
+
+// Exécuter une action sur la page via le background script
+async function executePageAction(action) {
+  console.log('[Alcentric] Sending action to background:', action);
+  
+  return new Promise((resolve) => {
+    const message = {
+      type: action.actionType,
+      ...action.params
+    };
+    
+    console.log('[Alcentric] Message to send:', message);
+    
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Alcentric] Chrome runtime error:', chrome.runtime.lastError);
+        resolve({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      console.log('[Alcentric] Action response:', response);
+      resolve(response || { success: false, error: 'Pas de réponse du content script' });
+    });
+  });
+}
+
+// Fonction de test pour vérifier que les actions fonctionnent
+async function testFillInput(selector, value) {
+  console.log('[Alcentric] Test fill input:', selector, value);
+  const result = await executePageAction({
+    actionType: 'FILL_INPUT',
+    params: { selector, value }
+  });
+  console.log('[Alcentric] Test result:', result);
+  return result;
+}
+
+// Exposer pour debug dans la console
+window.alcentricTest = {
+  fillInput: testFillInput,
+  executeAction: executePageAction
+};
 
 async function sendMessage(content) {
   if (isStreaming || !content.trim()) return;
@@ -111,17 +265,12 @@ async function sendMessage(content) {
   let assistantMessageEl = null;
   let contentEl = null;
   let responseReceived = false;
+  const executedActions = []; // Pour suivre les actions exécutées
   
   try {
-    // Récupérer le contexte de la page actuelle
-    const pageContext = await getPageContext();
-    const selectedText = await getSelectedText();
-    
-    // Préparer le contexte à envoyer à l'API
-    const context = {
-      pageContext: pageContext,
-      selectedText: selectedText
-    };
+    // Récupérer le contexte complet (page normale ou PDF)
+    const context = await getFullContext();
+    console.log('[Alcentric] Context retrieved:', context.pageContext?.pdfInfo ? 'PDF' : 'Normal page');
     
     // Créer une copie des messages pour l'API (éviter les modifications pendant l'envoi)
     const messagesToSend = [...chatMessages];
@@ -174,6 +323,15 @@ async function sendMessage(content) {
                   contentEl.innerHTML = escapeHtml(assistantContent);
                   scrollToBottom();
                 }
+              } else if (data.type === 'action' && data.action) {
+                // Exécuter l'action sur la page
+                console.log('Executing action:', data.action);
+                const actionResult = await executePageAction(data.action);
+                executedActions.push({
+                  action: data.action,
+                  result: actionResult
+                });
+                console.log('Action result:', actionResult);
               } else if (data.type === 'error') {
                 console.error('API Error:', data.content);
                 if (!responseReceived) {
