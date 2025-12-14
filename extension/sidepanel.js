@@ -42,6 +42,20 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Parser le Markdown en HTML sécurisé
+function parseMarkdown(text) {
+  if (typeof marked !== 'undefined') {
+    // Configurer marked pour la sécurité
+    marked.setOptions({
+      breaks: true, // Convertir les retours à la ligne en <br>
+      gfm: true,    // GitHub Flavored Markdown
+    });
+    return marked.parse(text);
+  }
+  // Fallback si marked n'est pas chargé
+  return escapeHtml(text);
+}
+
 function scrollToBottom() {
   chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 }
@@ -52,7 +66,11 @@ function createMessageElement(role, content) {
   const avatarSvg = role === 'assistant' 
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`;
-  messageDiv.innerHTML = `<div class="message-avatar">${avatarSvg}</div><div class="message-content"><p>${escapeHtml(content)}</p></div>`;
+  
+  // Utiliser Markdown pour les messages assistant, escapeHtml pour les messages utilisateur
+  const formattedContent = role === 'assistant' ? parseMarkdown(content) : `<p>${escapeHtml(content)}</p>`;
+  
+  messageDiv.innerHTML = `<div class="message-avatar">${avatarSvg}</div><div class="message-content">${formattedContent}</div>`;
   return messageDiv;
 }
 
@@ -287,9 +305,11 @@ async function sendMessage(content) {
     
     typingEl.remove();
     
-    // Créer l'élément de message assistant
-    assistantMessageEl = createMessageElement('assistant', '');
-    contentEl = assistantMessageEl.querySelector('.message-content p');
+    // Créer l'élément de message assistant pour le streaming
+    assistantMessageEl = document.createElement('div');
+    assistantMessageEl.className = 'message assistant';
+    assistantMessageEl.innerHTML = `<div class="message-avatar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div><div class="message-content"></div>`;
+    contentEl = assistantMessageEl.querySelector('.message-content');
     chatMessagesEl.appendChild(assistantMessageEl);
     
     const reader = response.body.getReader();
@@ -320,7 +340,7 @@ async function sendMessage(content) {
                 assistantContent += data.content;
                 responseReceived = true;
                 if (contentEl) {
-                  contentEl.innerHTML = escapeHtml(assistantContent);
+                  contentEl.innerHTML = parseMarkdown(assistantContent);
                   scrollToBottom();
                 }
               } else if (data.type === 'action' && data.action) {
@@ -337,7 +357,7 @@ async function sendMessage(content) {
                 if (!responseReceived) {
                   assistantContent = data.content || 'Une erreur est survenue.';
                   if (contentEl) {
-                    contentEl.innerHTML = escapeHtml(assistantContent);
+                    contentEl.innerHTML = parseMarkdown(assistantContent);
                   }
                 }
               }
@@ -359,7 +379,7 @@ async function sendMessage(content) {
           assistantContent += data.content;
           responseReceived = true;
           if (contentEl) {
-            contentEl.innerHTML = escapeHtml(assistantContent);
+            contentEl.innerHTML = parseMarkdown(assistantContent);
           }
         }
       } catch (e) {}
@@ -368,11 +388,15 @@ async function sendMessage(content) {
     // Ajouter la réponse de l'assistant à l'historique seulement si on a reçu du contenu
     if (assistantContent.trim()) {
       chatMessages.push({ role: 'assistant', content: assistantContent });
+      // Re-render avec Markdown complet à la fin
+      if (contentEl) {
+        contentEl.innerHTML = parseMarkdown(assistantContent);
+      }
     } else {
       // Si pas de contenu, afficher un message par défaut et l'ajouter à l'historique
       assistantContent = "Je n'ai pas pu générer de réponse. Pouvez-vous reformuler votre question ?";
       if (contentEl) {
-        contentEl.innerHTML = escapeHtml(assistantContent);
+        contentEl.innerHTML = parseMarkdown(assistantContent);
       }
       chatMessages.push({ role: 'assistant', content: assistantContent });
     }
