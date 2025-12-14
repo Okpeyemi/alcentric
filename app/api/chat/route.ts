@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const { messages, context } = await request.json()
 
     const model = vertexAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-001',
+      model: 'gemini-2.5-flash',
       systemInstruction,
       generationConfig: {
         maxOutputTokens: 2048,
