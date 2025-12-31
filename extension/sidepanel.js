@@ -580,9 +580,18 @@ async function checkSession() {
 }
 
 // Vérifier l'état de connexion
+// AUTHENTIFICATION DÉSACTIVÉE - Accès direct au chat
 async function checkAuth() {
   showState('loading');
   
+  // Auth désactivée : afficher directement le chat
+  currentUser = { email: 'Utilisateur' };
+  userEmailEl.textContent = 'Mode sans auth';
+  showState('logged-in');
+  loadSharedHistory();
+  
+  /* 
+  // === CODE D'AUTHENTIFICATION (DÉSACTIVÉ) ===
   const user = await checkSession();
   
   if (user) {
@@ -590,13 +599,13 @@ async function checkAuth() {
     userEmailEl.textContent = user.email;
     showState('logged-in');
     startSessionCheck();
-    // Charger l'historique partagé (chat texte + vocal)
     loadSharedHistory();
   } else {
     currentUser = null;
     showState('login');
     stopSessionCheck();
   }
+  */
 }
 
 // Vérification périodique de la session

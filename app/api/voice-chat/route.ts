@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { VertexAI } from '@google-cloud/vertexai'
 
-// Configuration ElevenLabs
-const ELEVENLABS_API_KEY = 'sk_cd87bf204aaea78b5c7b60a4987d41b0af06c35d2b72f5ba'
-const ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM' // Rachel - voix par défaut
+// Configuration ElevenLabs (variables d'environnement)
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || ''
+const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'
 
 // Configuration Vertex AI
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'feedhawk'

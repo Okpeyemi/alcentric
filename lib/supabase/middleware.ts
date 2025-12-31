@@ -1,7 +1,17 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// AUTHENTIFICATION DÉSACTIVÉE TEMPORAIREMENT
+// Pour réactiver l'auth Supabase, décommenter le code ci-dessous
+
 export async function updateSession(request: NextRequest) {
+  // Simplement laisser passer toutes les requêtes sans vérification d'auth
+  return NextResponse.next({ request })
+  
+  /* 
+  // === CODE D'AUTHENTIFICATION SUPABASE (DÉSACTIVÉ) ===
+  
+  import { createServerClient } from '@supabase/ssr'
+  
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -27,10 +37,6 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -43,11 +49,11 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/api/voice-chat') &&
     !request.nextUrl.pathname.startsWith('/api/voice-chat-simple')
   ) {
-    // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   return supabaseResponse
+  */
 }

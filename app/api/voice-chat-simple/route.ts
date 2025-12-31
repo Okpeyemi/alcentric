@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Configuration ElevenLabs
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || 'sk_cd87bf204aaea78b5c7b60a4987d41b0af06c35d2b72f5ba'
-const ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM' // Rachel - voix par défaut
+// Configuration ElevenLabs (variables d'environnement)
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || ''
+const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'
 
-// Configuration Google AI
+// Configuration Google AI (variable d'environnement)
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || ''
 
 // Initialiser Google Generative AI
@@ -75,12 +75,10 @@ async function textToSpeech(text: string): Promise<string> {
       },
       body: JSON.stringify({
         text,
-        model_id: 'eleven_multilingual_v2',
+        model_id: 'eleven_turbo_v2_5', // Modèle plus rapide
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
-          style: 0.5,
-          use_speaker_boost: true,
         },
       }),
     })

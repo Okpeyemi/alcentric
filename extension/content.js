@@ -107,25 +107,23 @@ function createSelectionMenu() {
   });
 }
 
-// Créer la modale de conversation vocale
+// Créer la modale de conversation vocale - Style appel téléphone
 function createVoiceModal() {
   if (alcentricVoiceModal) return;
   
   alcentricVoiceModal = document.createElement('div');
   alcentricVoiceModal.id = 'alcentric-voice-modal';
   alcentricVoiceModal.innerHTML = `
-    <div class="alcentric-voice-container">
+    <div class="alcentric-voice-container" id="alcentric-voice-drag-handle">
       <div class="alcentric-voice-header">
         <div class="alcentric-voice-title">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
-            <path d="M2 12h20"/>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
           </svg>
-          Alcentric Voice
+          Appel en cours
         </div>
         <button class="alcentric-voice-close" id="alcentric-voice-close">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -133,13 +131,12 @@ function createVoiceModal() {
       </div>
       
       <div class="alcentric-voice-visualizer" id="alcentric-voice-visualizer">
-        <div class="alcentric-voice-circle outer"></div>
-        <div class="alcentric-voice-circle middle"></div>
-        <div class="alcentric-voice-circle inner">
+        <div class="alcentric-wave alcentric-wave-1"></div>
+        <div class="alcentric-wave alcentric-wave-2"></div>
+        <div class="alcentric-wave alcentric-wave-3"></div>
+        <div class="alcentric-call-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" x2="12" y1="19" y2="22"/>
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
           </svg>
         </div>
       </div>
@@ -148,8 +145,17 @@ function createVoiceModal() {
         Cliquez pour parler
       </div>
       
-      <div class="alcentric-voice-transcript" id="alcentric-voice-transcript">
-        <p class="assistant">Bonjour ! Comment puis-je vous aider avec cette page ?</p>
+      <button class="alcentric-toggle-transcript" id="alcentric-toggle-transcript">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+        Voir la conversation
+      </button>
+      
+      <div class="alcentric-voice-transcript-wrapper" id="alcentric-transcript-wrapper">
+        <div class="alcentric-voice-transcript" id="alcentric-voice-transcript">
+          <p class="assistant">Bonjour ! Comment puis-je vous aider ?</p>
+        </div>
       </div>
       
       <button class="alcentric-voice-btn" id="alcentric-voice-btn">
@@ -161,12 +167,7 @@ function createVoiceModal() {
       </button>
       
       <div class="alcentric-voice-context" id="alcentric-voice-context">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="16" x2="12" y2="12"/>
-          <line x1="12" y1="8" x2="12.01" y2="8"/>
-        </svg>
-        <span id="alcentric-context-info">Contexte de la page chargé</span>
+        <span id="alcentric-context-info"></span>
       </div>
     </div>
   `;
@@ -177,11 +178,71 @@ function createVoiceModal() {
   document.getElementById('alcentric-voice-close').addEventListener('click', closeVoiceModal);
   document.getElementById('alcentric-voice-btn').addEventListener('click', toggleVoiceRecording);
   
+  // Toggle transcript
+  document.getElementById('alcentric-toggle-transcript').addEventListener('click', () => {
+    const wrapper = document.getElementById('alcentric-transcript-wrapper');
+    const btn = document.getElementById('alcentric-toggle-transcript');
+    wrapper.classList.toggle('expanded');
+    btn.classList.toggle('expanded');
+    btn.innerHTML = wrapper.classList.contains('expanded') 
+      ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg> Masquer`
+      : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg> Voir la conversation`;
+  });
+  
   // Fermer avec Echap
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && alcentricVoiceModal.classList.contains('show')) {
       closeVoiceModal();
     }
+  });
+  
+  // Rendre le modal déplaçable
+  makeDraggable(alcentricVoiceModal, document.getElementById('alcentric-voice-drag-handle'));
+}
+
+// Fonction pour rendre un élément déplaçable
+function makeDraggable(element, handle) {
+  let isDragging = false;
+  let startX, startY, startRight, startBottom;
+  
+  handle.addEventListener('mousedown', (e) => {
+    // Ignorer si on clique sur un bouton
+    if (e.target.closest('button')) return;
+    
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    const rect = element.getBoundingClientRect();
+    startRight = window.innerWidth - rect.right;
+    startBottom = window.innerHeight - rect.bottom;
+    
+    document.body.style.userSelect = 'none';
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    const deltaX = startX - e.clientX;
+    const deltaY = startY - e.clientY;
+    
+    let newRight = startRight + deltaX;
+    let newBottom = startBottom + deltaY;
+    
+    // Limites de l'écran
+    const rect = element.querySelector('.alcentric-voice-container').getBoundingClientRect();
+    newRight = Math.max(0, Math.min(newRight, window.innerWidth - rect.width));
+    newBottom = Math.max(0, Math.min(newBottom, window.innerHeight - rect.height));
+    
+    element.style.right = newRight + 'px';
+    element.style.bottom = newBottom + 'px';
+    element.style.left = 'auto';
+    element.style.top = 'auto';
+  });
+  
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+    document.body.style.userSelect = '';
   });
 }
 
