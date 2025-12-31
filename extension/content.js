@@ -32,13 +32,13 @@ function notifyVoiceMessage(userMessage, assistantMessage) {
     type: 'VOICE_CHAT_MESSAGE',
     userMessage,
     assistantMessage
-  }).catch(() => {}); // Ignorer si le sidepanel n'est pas ouvert
+  }).catch(() => { }); // Ignorer si le sidepanel n'est pas ouvert
 }
 
 // Créer le bouton flottant
 function createButton() {
   if (alcentricButton) return;
-  
+
   alcentricButton = document.createElement('div');
   alcentricButton.id = 'alcentric-floating-button';
   alcentricButton.innerHTML = `
@@ -48,13 +48,13 @@ function createButton() {
       <path d="M2 12h20"/>
     </svg>
   `;
-  
+
   alcentricButton.addEventListener('click', handleButtonClick);
   document.body.appendChild(alcentricButton);
-  
+
   // Créer le menu de sélection
   createSelectionMenu();
-  
+
   // Créer la modale vocale
   createVoiceModal();
 }
@@ -62,7 +62,7 @@ function createButton() {
 // Créer le menu de sélection (chat texte ou vocal)
 function createSelectionMenu() {
   if (alcentricMenu) return;
-  
+
   alcentricMenu = document.createElement('div');
   alcentricMenu.id = 'alcentric-menu';
   alcentricMenu.innerHTML = `
@@ -81,14 +81,14 @@ function createSelectionMenu() {
       <span>Discussion vocale</span>
     </div>
   `;
-  
+
   // Event listeners pour les options du menu
   alcentricMenu.querySelectorAll('.alcentric-menu-item').forEach(item => {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
       const mode = item.dataset.mode;
       hideMenu();
-      
+
       if (mode === 'chat') {
         chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
       } else if (mode === 'voice') {
@@ -96,9 +96,9 @@ function createSelectionMenu() {
       }
     });
   });
-  
+
   document.body.appendChild(alcentricMenu);
-  
+
   // Fermer le menu si on clique ailleurs
   document.addEventListener('click', (e) => {
     if (!alcentricMenu.contains(e.target) && e.target !== alcentricButton) {
@@ -110,7 +110,7 @@ function createSelectionMenu() {
 // Créer la modale de conversation vocale - Style appel téléphone
 function createVoiceModal() {
   if (alcentricVoiceModal) return;
-  
+
   alcentricVoiceModal = document.createElement('div');
   alcentricVoiceModal.id = 'alcentric-voice-modal';
   alcentricVoiceModal.innerHTML = `
@@ -120,7 +120,7 @@ function createVoiceModal() {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
           </svg>
-          Appel en cours
+          Chat vocal
         </div>
         <button class="alcentric-voice-close" id="alcentric-voice-close">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -171,31 +171,31 @@ function createVoiceModal() {
       </div>
     </div>
   `;
-  
+
   document.body.appendChild(alcentricVoiceModal);
-  
+
   // Event listeners
   document.getElementById('alcentric-voice-close').addEventListener('click', closeVoiceModal);
   document.getElementById('alcentric-voice-btn').addEventListener('click', toggleVoiceRecording);
-  
+
   // Toggle transcript
   document.getElementById('alcentric-toggle-transcript').addEventListener('click', () => {
     const wrapper = document.getElementById('alcentric-transcript-wrapper');
     const btn = document.getElementById('alcentric-toggle-transcript');
     wrapper.classList.toggle('expanded');
     btn.classList.toggle('expanded');
-    btn.innerHTML = wrapper.classList.contains('expanded') 
+    btn.innerHTML = wrapper.classList.contains('expanded')
       ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg> Masquer`
       : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg> Voir la conversation`;
   });
-  
+
   // Fermer avec Echap
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && alcentricVoiceModal.classList.contains('show')) {
       closeVoiceModal();
     }
   });
-  
+
   // Rendre le modal déplaçable
   makeDraggable(alcentricVoiceModal, document.getElementById('alcentric-voice-drag-handle'));
 }
@@ -204,42 +204,42 @@ function createVoiceModal() {
 function makeDraggable(element, handle) {
   let isDragging = false;
   let startX, startY, startRight, startBottom;
-  
+
   handle.addEventListener('mousedown', (e) => {
     // Ignorer si on clique sur un bouton
     if (e.target.closest('button')) return;
-    
+
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;
-    
+
     const rect = element.getBoundingClientRect();
     startRight = window.innerWidth - rect.right;
     startBottom = window.innerHeight - rect.bottom;
-    
+
     document.body.style.userSelect = 'none';
   });
-  
+
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
-    
+
     const deltaX = startX - e.clientX;
     const deltaY = startY - e.clientY;
-    
+
     let newRight = startRight + deltaX;
     let newBottom = startBottom + deltaY;
-    
+
     // Limites de l'écran
     const rect = element.querySelector('.alcentric-voice-container').getBoundingClientRect();
     newRight = Math.max(0, Math.min(newRight, window.innerWidth - rect.width));
     newBottom = Math.max(0, Math.min(newBottom, window.innerHeight - rect.height));
-    
+
     element.style.right = newRight + 'px';
     element.style.bottom = newBottom + 'px';
     element.style.left = 'auto';
     element.style.top = 'auto';
   });
-  
+
   document.addEventListener('mouseup', () => {
     isDragging = false;
     document.body.style.userSelect = '';
@@ -291,25 +291,25 @@ let conversationHistory = [];
 // Ouvrir la modale vocale
 async function openVoiceModal() {
   alcentricVoiceModal?.classList.add('show');
-  
+
   // Mettre à jour le contexte affiché
   const pageTitle = document.title || window.location.hostname;
   document.getElementById('alcentric-context-info').textContent = `Contexte : ${pageTitle.substring(0, 50)}${pageTitle.length > 50 ? '...' : ''}`;
-  
+
   // Charger l'historique partagé (synchronisé avec le chat texte)
   await loadSharedVoiceHistory();
-  
+
   // Afficher l'historique existant dans la transcription
   const transcriptEl = document.getElementById('alcentric-voice-transcript');
   if (conversationHistory.length > 0) {
-    transcriptEl.innerHTML = conversationHistory.map(msg => 
+    transcriptEl.innerHTML = conversationHistory.map(msg =>
       `<p class="${msg.role}">${msg.content}</p>`
     ).join('');
     transcriptEl.scrollTop = transcriptEl.scrollHeight;
   } else {
     transcriptEl.innerHTML = '<p class="assistant">Bonjour ! Comment puis-je vous aider avec cette page ?</p>';
   }
-  
+
   // Initialiser la conversation vocale
   await initVoiceConversation();
 }
@@ -318,7 +318,7 @@ async function openVoiceModal() {
 function closeVoiceModal() {
   alcentricVoiceModal?.classList.remove('show');
   stopRecording();
-  
+
   // Déconnecter ElevenLabs si connecté
   if (voiceConversation) {
     voiceConversation.close();
@@ -337,29 +337,29 @@ const SILENCE_TIMEOUT = 1500; // 1.5 secondes de silence = fin de parole
 async function initVoiceConversation() {
   try {
     updateVoiceStatus('Initialisation...');
-    
+
     // Vérifier si la Web Speech API est disponible
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       updateVoiceStatus('Erreur : reconnaissance vocale non supportée');
       return;
     }
-    
+
     // Initialiser la reconnaissance vocale
     recognition = new SpeechRecognition();
     recognition.lang = 'fr-FR';
     recognition.continuous = true;       // Écoute continue
     recognition.interimResults = true;   // Résultats intermédiaires pour feedback temps réel
     recognition.maxAlternatives = 1;
-    
+
     recognition.onresult = (event) => {
       // Ne pas traiter si on est déjà en train de traiter une réponse
       if (isProcessing) return;
-      
+
       // Récupérer la transcription (finale ou intermédiaire)
       let interimTranscript = '';
       let finalTranscript = '';
-      
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
@@ -368,18 +368,18 @@ async function initVoiceConversation() {
           interimTranscript += result[0].transcript;
         }
       }
-      
+
       // Mettre à jour la transcription courante
       if (finalTranscript) {
         currentTranscript += finalTranscript;
       }
-      
+
       // Afficher le feedback en temps réel
       const displayText = currentTranscript + interimTranscript;
       if (displayText.trim()) {
         updateVoiceStatus('🎤 ' + displayText.substring(0, 50) + (displayText.length > 50 ? '...' : ''));
       }
-      
+
       // Réinitialiser le timer de silence à chaque nouveau résultat
       clearTimeout(silenceTimer);
       silenceTimer = setTimeout(() => {
@@ -389,19 +389,19 @@ async function initVoiceConversation() {
         }
       }, SILENCE_TIMEOUT);
     };
-    
+
     recognition.onerror = (event) => {
       console.error('[Alcentric Voice] Erreur reconnaissance:', event.error);
-      
+
       // Ignorer l'erreur 'aborted' car on l'utilise pour arrêter proprement
       if (event.error === 'aborted') return;
-      
+
       clearTimeout(silenceTimer);
       isRecording = false;
       isProcessing = false;
       document.getElementById('alcentric-voice-btn')?.classList.remove('recording');
       document.getElementById('alcentric-voice-visualizer')?.classList.remove('listening');
-      
+
       if (event.error === 'no-speech') {
         updateVoiceStatus('Aucune parole détectée. Réessayez.');
       } else if (event.error === 'not-allowed') {
@@ -410,7 +410,7 @@ async function initVoiceConversation() {
         updateVoiceStatus('Erreur : ' + event.error);
       }
     };
-    
+
     recognition.onend = () => {
       // Si on enregistre encore et qu'on n'a pas de transcription, relancer
       if (isRecording && !isProcessing && !currentTranscript.trim()) {
@@ -421,7 +421,7 @@ async function initVoiceConversation() {
         }
       }
     };
-    
+
     updateVoiceStatus('Cliquez pour parler');
   } catch (error) {
     console.error('[Alcentric Voice] Erreur init:', error);
@@ -432,27 +432,27 @@ async function initVoiceConversation() {
 // Terminer l'enregistrement et traiter la transcription
 async function finishRecording() {
   if (isProcessing || !currentTranscript.trim()) return;
-  
+
   isProcessing = true;
   clearTimeout(silenceTimer);
-  
+
   // Arrêter la reconnaissance
   try {
     recognition.stop();
-  } catch (e) {}
-  
+  } catch (e) { }
+
   isRecording = false;
   document.getElementById('alcentric-voice-btn')?.classList.remove('recording');
   document.getElementById('alcentric-voice-visualizer')?.classList.remove('listening');
-  
+
   const transcript = currentTranscript.trim();
   currentTranscript = ''; // Réinitialiser pour le prochain tour
-  
+
   console.log('[Alcentric Voice] Transcription finale:', transcript);
-  
+
   // Traiter le texte
   await processVoiceText(transcript);
-  
+
   isProcessing = false;
 }
 
@@ -471,25 +471,25 @@ function startRecording() {
     updateVoiceStatus('Erreur : reconnaissance vocale non initialisée');
     return;
   }
-  
+
   if (isProcessing) {
     updateVoiceStatus('Traitement en cours, patientez...');
     return;
   }
-  
+
   try {
     // Réinitialiser l'état
     currentTranscript = '';
     clearTimeout(silenceTimer);
-    
+
     recognition.start();
     isRecording = true;
-    
+
     // UI updates
     document.getElementById('alcentric-voice-btn')?.classList.add('recording');
     document.getElementById('alcentric-voice-visualizer')?.classList.add('listening');
     updateVoiceStatus('Écoute en cours... Parlez maintenant');
-    
+
   } catch (error) {
     console.error('[Alcentric Voice] Erreur démarrage:', error);
     // Si déjà en cours, ignorer
@@ -504,7 +504,7 @@ function startRecording() {
 // Arrêter l'enregistrement manuellement (bouton)
 function stopRecording() {
   clearTimeout(silenceTimer);
-  
+
   if (recognition && isRecording) {
     // Si on a du texte, le traiter
     if (currentTranscript.trim() && !isProcessing) {
@@ -513,7 +513,7 @@ function stopRecording() {
       // Sinon juste arrêter
       try {
         recognition.stop();
-      } catch (e) {}
+      } catch (e) { }
       isRecording = false;
       document.getElementById('alcentric-voice-btn')?.classList.remove('recording');
       document.getElementById('alcentric-voice-visualizer')?.classList.remove('listening');
@@ -526,14 +526,14 @@ function stopRecording() {
 async function processVoiceText(text) {
   try {
     updateVoiceStatus('Génération de la réponse...');
-    
+
     // Afficher la transcription utilisateur
     addTranscript('user', text);
     conversationHistory.push({ role: 'user', content: text });
-    
+
     // Récupérer le contexte complet de la page (inclut PDF, images, vidéos, formulaires)
     const fullContext = getFullPageContext();
-    
+
     // Envoyer le texte au serveur pour la réponse IA + TTS
     const response = await fetch(`${API_BASE_URL}/api/voice-chat-simple`, {
       method: 'POST',
@@ -547,31 +547,31 @@ async function processVoiceText(text) {
         }
       })
     });
-    
+
     if (!response.ok) {
       throw new Error(`Erreur serveur: ${response.status}`);
     }
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       // Afficher et jouer la réponse
       addTranscript('assistant', result.assistantText);
       conversationHistory.push({ role: 'assistant', content: result.assistantText });
-      
+
       // Synchroniser avec le sidepanel
       notifyVoiceMessage(text, result.assistantText);
-      
+
       // Jouer l'audio de réponse
       if (result.audioResponse) {
         await playAudioResponse(result.audioResponse);
       }
-      
+
       updateVoiceStatus('Cliquez pour parler');
     } else {
       throw new Error(result.error || 'Erreur inconnue');
     }
-    
+
   } catch (error) {
     console.error('[Alcentric Voice] Erreur traitement:', error);
     updateVoiceStatus('Erreur : ' + error.message);
@@ -585,20 +585,20 @@ async function playAudioResponse(base64Audio) {
     try {
       updateVoiceStatus('Réponse en cours...');
       document.getElementById('alcentric-voice-visualizer').classList.add('speaking');
-      
+
       const audio = new Audio(`data:audio/mpeg;base64,${base64Audio}`);
-      
+
       audio.onended = () => {
         document.getElementById('alcentric-voice-visualizer').classList.remove('speaking');
         updateVoiceStatus('Cliquez pour parler');
         resolve();
       };
-      
+
       audio.onerror = (e) => {
         document.getElementById('alcentric-voice-visualizer').classList.remove('speaking');
         reject(e);
       };
-      
+
       audio.play();
     } catch (error) {
       document.getElementById('alcentric-voice-visualizer').classList.remove('speaking');
@@ -640,33 +640,33 @@ function blobToBase64(blob) {
 function extractPageContent() {
   // Supprimer les éléments non pertinents pour l'extraction
   const elementsToIgnore = ['script', 'style', 'noscript', 'svg', 'path', 'iframe', 'nav', 'footer', 'header'];
-  
+
   // Cloner le body pour ne pas modifier la page
   const bodyClone = document.body.cloneNode(true);
-  
+
   // Supprimer les éléments non pertinents
   elementsToIgnore.forEach(tag => {
     bodyClone.querySelectorAll(tag).forEach(el => el.remove());
   });
-  
+
   // Supprimer aussi les éléments cachés et notre propre bouton
   bodyClone.querySelectorAll('[style*="display: none"], [style*="visibility: hidden"], [hidden], #alcentric-floating-button').forEach(el => el.remove());
-  
+
   // Extraire le texte
   let text = bodyClone.innerText || bodyClone.textContent || '';
-  
+
   // Nettoyer le texte (supprimer les espaces multiples, lignes vides excessives)
   text = text
     .replace(/\s+/g, ' ')
     .replace(/\n\s*\n/g, '\n')
     .trim();
-  
+
   // Limiter la taille du contenu (environ 15000 caractères pour rester dans les limites)
   const maxLength = 15000;
   if (text.length > maxLength) {
     text = text.substring(0, maxLength) + '... [contenu tronqué]';
   }
-  
+
   return text;
 }
 
@@ -680,27 +680,27 @@ function extractPageMetadata() {
     language: document.documentElement.lang || 'unknown',
     domain: window.location.hostname
   };
-  
+
   // Récupérer la meta description
-  const descMeta = document.querySelector('meta[name="description"]') || 
-                   document.querySelector('meta[property="og:description"]');
+  const descMeta = document.querySelector('meta[name="description"]') ||
+    document.querySelector('meta[property="og:description"]');
   if (descMeta) {
     metadata.description = descMeta.getAttribute('content') || '';
   }
-  
+
   // Récupérer les keywords
   const keywordsMeta = document.querySelector('meta[name="keywords"]');
   if (keywordsMeta) {
     metadata.keywords = keywordsMeta.getAttribute('content') || '';
   }
-  
+
   return metadata;
 }
 
 // Extraire les éléments interactifs de la page
 function extractInteractiveElements() {
   const elements = [];
-  
+
   // Boutons
   document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]').forEach((el, index) => {
     if (index < 20) { // Limiter à 20 boutons
@@ -712,7 +712,7 @@ function extractInteractiveElements() {
       });
     }
   });
-  
+
   // Liens principaux
   document.querySelectorAll('a[href]').forEach((el, index) => {
     if (index < 30) { // Limiter à 30 liens
@@ -726,7 +726,7 @@ function extractInteractiveElements() {
       }
     }
   });
-  
+
   // Champs de formulaire
   document.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach((el, index) => {
     if (index < 15) { // Limiter à 15 champs
@@ -738,14 +738,14 @@ function extractInteractiveElements() {
       });
     }
   });
-  
+
   return elements;
 }
 
 // Extraire les images avec plus de détails
 function extractImages() {
   const images = [];
-  
+
   // Images standards
   document.querySelectorAll('img').forEach((img, index) => {
     if (index < 20) {
@@ -757,17 +757,17 @@ function extractImages() {
         width: img.naturalWidth || img.width || 0,
         height: img.naturalHeight || img.height || 0
       };
-      
+
       // Essayer de deviner le contenu de l'image par son nom
       const filename = img.src?.split('/').pop()?.split('?')[0] || '';
       if (filename) {
         imageInfo.filename = filename;
       }
-      
+
       images.push(imageInfo);
     }
   });
-  
+
   // Images en background CSS (principales)
   document.querySelectorAll('[style*="background-image"]').forEach((el, index) => {
     if (index < 5) {
@@ -782,7 +782,7 @@ function extractImages() {
       }
     }
   });
-  
+
   // SVGs
   document.querySelectorAll('svg[aria-label], svg title').forEach((svg, index) => {
     if (index < 5) {
@@ -795,14 +795,14 @@ function extractImages() {
       }
     }
   });
-  
+
   return images;
 }
 
 // Extraire les vidéos de la page
 function extractVideos() {
   const videos = [];
-  
+
   // Vidéos HTML5
   document.querySelectorAll('video').forEach((video, index) => {
     if (index < 10) {
@@ -815,7 +815,7 @@ function extractVideos() {
       });
     }
   });
-  
+
   // Vidéos YouTube intégrées
   document.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach((iframe, index) => {
     if (index < 10) {
@@ -829,7 +829,7 @@ function extractVideos() {
       });
     }
   });
-  
+
   // Vidéos Vimeo
   document.querySelectorAll('iframe[src*="vimeo"]').forEach((iframe, index) => {
     if (index < 5) {
@@ -840,7 +840,7 @@ function extractVideos() {
       });
     }
   });
-  
+
   return videos;
 }
 
@@ -848,12 +848,12 @@ function extractVideos() {
 function detectPDF() {
   const url = window.location.href;
   const isPDFUrl = url.toLowerCase().endsWith('.pdf') || url.includes('pdf');
-  
+
   // Vérifier si c'est un viewer PDF de Chrome
   const isPDFViewer = document.querySelector('embed[type="application/pdf"]') !== null ||
-                      document.body?.classList.contains('pdf-viewer') ||
-                      document.querySelector('pdf-viewer') !== null;
-  
+    document.body?.classList.contains('pdf-viewer') ||
+    document.querySelector('pdf-viewer') !== null;
+
   // Essayer d'extraire le texte du PDF si possible
   let pdfContent = '';
   if (isPDFUrl || isPDFViewer) {
@@ -863,7 +863,7 @@ function detectPDF() {
       pdfContent += span.textContent + ' ';
     });
   }
-  
+
   return {
     isPDF: isPDFUrl || isPDFViewer,
     url: url,
@@ -874,12 +874,12 @@ function detectPDF() {
 // Extraire les liens vers des fichiers/médias
 function extractMediaLinks() {
   const mediaLinks = [];
-  
+
   document.querySelectorAll('a[href]').forEach((link, index) => {
     if (index < 30) {
       const href = link.href.toLowerCase();
       const text = link.textContent?.trim() || '';
-      
+
       // Détecter les types de fichiers
       if (href.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv)(\?|$)/i)) {
         mediaLinks.push({
@@ -903,7 +903,7 @@ function extractMediaLinks() {
       }
     }
   });
-  
+
   return mediaLinks;
 }
 
@@ -914,19 +914,19 @@ function findElement(selector) {
   // Essayer d'abord le sélecteur CSS direct
   let element = document.querySelector(selector);
   if (element) return element;
-  
+
   // Essayer par ID
   element = document.getElementById(selector);
   if (element) return element;
-  
+
   // Essayer par name
   element = document.querySelector(`[name="${selector}"]`);
   if (element) return element;
-  
+
   // Essayer par placeholder
   element = document.querySelector(`[placeholder*="${selector}" i]`);
   if (element) return element;
-  
+
   // Essayer par label
   const labels = document.querySelectorAll('label');
   for (const label of labels) {
@@ -941,20 +941,20 @@ function findElement(selector) {
       if (element) return element;
     }
   }
-  
+
   // Essayer par aria-label
   element = document.querySelector(`[aria-label*="${selector}" i]`);
   if (element) return element;
-  
+
   // Essayer par texte du bouton
   const buttons = document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]');
   for (const btn of buttons) {
     if (btn.textContent?.toLowerCase().includes(selector.toLowerCase()) ||
-        btn.value?.toLowerCase().includes(selector.toLowerCase())) {
+      btn.value?.toLowerCase().includes(selector.toLowerCase())) {
       return btn;
     }
   }
-  
+
   // Essayer par texte du lien
   const links = document.querySelectorAll('a');
   for (const link of links) {
@@ -962,36 +962,36 @@ function findElement(selector) {
       return link;
     }
   }
-  
+
   return null;
 }
 
 // Remplir un champ de formulaire
 function fillInput(selector, value) {
   console.log('[Alcentric CS] fillInput called:', selector, value);
-  
+
   const element = findElement(selector);
   if (!element) {
     console.error('[Alcentric CS] Element not found:', selector);
     return { success: false, error: `Élément "${selector}" non trouvé` };
   }
-  
+
   console.log('[Alcentric CS] Element found:', element.tagName, element);
-  
+
   // Vérifier si c'est un élément éditable
   const tagName = element.tagName.toLowerCase();
   const type = element.type?.toLowerCase();
-  
+
   if (tagName === 'input' || tagName === 'textarea') {
     // Scroll vers l'élément
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
+
     // Focus sur l'élément
     element.focus();
-    
+
     // Effacer la valeur existante
     element.value = '';
-    
+
     // Simuler une saisie caractère par caractère pour les frameworks réactifs
     // Utiliser le setter natif pour contourner les problèmes avec React/Vue
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
@@ -999,13 +999,13 @@ function fillInput(selector, value) {
     )?.set || Object.getOwnPropertyDescriptor(
       window.HTMLTextAreaElement.prototype, 'value'
     )?.set;
-    
+
     if (nativeInputValueSetter) {
       nativeInputValueSetter.call(element, value);
     } else {
       element.value = value;
     }
-    
+
     // Déclencher TOUS les événements possibles pour les frameworks JS
     element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
     element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
@@ -1013,7 +1013,7 @@ function fillInput(selector, value) {
     element.dispatchEvent(new KeyboardEvent('keypress', { bubbles: true, key: 'a' }));
     element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'a' }));
     element.dispatchEvent(new Event('blur', { bubbles: true }));
-    
+
     // Aussi déclencher un InputEvent pour les frameworks modernes
     element.dispatchEvent(new InputEvent('input', {
       bubbles: true,
@@ -1021,28 +1021,28 @@ function fillInput(selector, value) {
       inputType: 'insertText',
       data: value
     }));
-    
+
     console.log('[Alcentric CS] Field filled successfully:', element.value);
     return { success: true, message: `Champ "${selector}" rempli avec "${value}"` };
   }
-  
+
   if (tagName === 'select') {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     element.focus();
-    
+
     // Pour les select, chercher l'option correspondante
     const options = element.querySelectorAll('option');
     let found = false;
-    
+
     for (const option of options) {
       if (option.value.toLowerCase() === value.toLowerCase() ||
-          option.textContent?.toLowerCase().includes(value.toLowerCase())) {
+        option.textContent?.toLowerCase().includes(value.toLowerCase())) {
         element.value = option.value;
         found = true;
         break;
       }
     }
-    
+
     if (found) {
       element.dispatchEvent(new Event('change', { bubbles: true }));
       console.log('[Alcentric CS] Select option set:', element.value);
@@ -1051,7 +1051,7 @@ function fillInput(selector, value) {
       return { success: false, error: `Option "${value}" non trouvée dans le select "${selector}"` };
     }
   }
-  
+
   // Pour les éléments contenteditable
   if (element.contentEditable === 'true') {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1061,28 +1061,28 @@ function fillInput(selector, value) {
     console.log('[Alcentric CS] ContentEditable filled');
     return { success: true, message: `Contenu "${selector}" modifié` };
   }
-  
+
   return { success: false, error: `L'élément "${selector}" n'est pas éditable` };
 }
 
 // Cliquer sur un élément
 function clickElement(selector) {
   console.log('[Alcentric CS] clickElement called:', selector);
-  
+
   const element = findElement(selector);
   if (!element) {
     console.error('[Alcentric CS] Element not found for click:', selector);
     return { success: false, error: `Élément "${selector}" non trouvé` };
   }
-  
+
   console.log('[Alcentric CS] Element found for click:', element.tagName, element);
-  
+
   // Scroll vers l'élément
   element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  
+
   // Simuler un vrai clic avec tous les événements
   element.focus();
-  
+
   // Créer et dispatcher les événements de souris
   const mouseEvents = ['mouseenter', 'mouseover', 'mousedown', 'mouseup', 'click'];
   mouseEvents.forEach(eventType => {
@@ -1094,12 +1094,12 @@ function clickElement(selector) {
     });
     element.dispatchEvent(event);
   });
-  
+
   // Pour les liens, forcer la navigation si nécessaire
   if (element.tagName.toLowerCase() === 'a' && element.href) {
     console.log('[Alcentric CS] Link clicked, href:', element.href);
   }
-  
+
   // Pour les boutons de type submit
   if (element.type === 'submit') {
     const form = element.closest('form');
@@ -1108,7 +1108,7 @@ function clickElement(selector) {
       form.requestSubmit ? form.requestSubmit(element) : form.submit();
     }
   }
-  
+
   console.log('[Alcentric CS] Click completed on:', selector);
   return { success: true, message: `Clic effectué sur "${selector}"` };
 }
@@ -1116,7 +1116,7 @@ function clickElement(selector) {
 // Remplir plusieurs champs à la fois
 function fillMultipleInputs(fields) {
   const results = [];
-  
+
   for (const field of fields) {
     const result = fillInput(field.selector, field.value);
     results.push({
@@ -1124,7 +1124,7 @@ function fillMultipleInputs(fields) {
       ...result
     });
   }
-  
+
   const successCount = results.filter(r => r.success).length;
   return {
     success: successCount > 0,
@@ -1136,15 +1136,15 @@ function fillMultipleInputs(fields) {
 // Obtenir la liste détaillée des champs de formulaire
 function getFormFields() {
   const fields = [];
-  
+
   document.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach((el, index) => {
-    const label = el.labels?.[0]?.textContent?.trim() || 
-                  el.placeholder || 
-                  el.name || 
-                  el.id ||
-                  el.getAttribute('aria-label') ||
-                  `Champ ${index + 1}`;
-    
+    const label = el.labels?.[0]?.textContent?.trim() ||
+      el.placeholder ||
+      el.name ||
+      el.id ||
+      el.getAttribute('aria-label') ||
+      `Champ ${index + 1}`;
+
     const field = {
       index: index,
       type: el.type || el.tagName.toLowerCase(),
@@ -1156,7 +1156,7 @@ function getFormFields() {
       required: el.required || false,
       disabled: el.disabled || false
     };
-    
+
     // Pour les selects, ajouter les options
     if (el.tagName.toLowerCase() === 'select') {
       field.options = Array.from(el.options).map(opt => ({
@@ -1164,24 +1164,24 @@ function getFormFields() {
         text: opt.textContent?.trim()
       }));
     }
-    
+
     fields.push(field);
   });
-  
+
   return fields;
 }
 
 // Soumettre un formulaire
 function submitForm(formSelector) {
   let form = null;
-  
+
   if (formSelector) {
     form = findElement(formSelector);
   } else {
     // Trouver le premier formulaire de la page
     form = document.querySelector('form');
   }
-  
+
   if (!form) {
     // Essayer de trouver et cliquer sur un bouton submit
     const submitBtn = document.querySelector('button[type="submit"], input[type="submit"], button:contains("Submit"), button:contains("Envoyer")');
@@ -1191,7 +1191,7 @@ function submitForm(formSelector) {
     }
     return { success: false, error: 'Aucun formulaire trouvé' };
   }
-  
+
   if (form.tagName.toLowerCase() === 'form') {
     form.submit();
     return { success: true, message: 'Formulaire soumis' };
@@ -1208,20 +1208,20 @@ function toggleCheckbox(selector, checked) {
   if (!element) {
     return { success: false, error: `Élément "${selector}" non trouvé` };
   }
-  
+
   if (element.type === 'checkbox' || element.type === 'radio') {
     element.checked = checked;
     element.dispatchEvent(new Event('change', { bubbles: true }));
     return { success: true, message: `${element.type} "${selector}" ${checked ? 'coché' : 'décoché'}` };
   }
-  
+
   return { success: false, error: `L'élément "${selector}" n'est pas une checkbox ou radio` };
 }
 
 // Faire défiler la page
 function scrollPage(direction, amount) {
   const scrollAmount = amount || 500;
-  
+
   if (direction === 'up') {
     window.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
   } else if (direction === 'down') {
@@ -1231,7 +1231,7 @@ function scrollPage(direction, amount) {
   } else if (direction === 'bottom') {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
-  
+
   return { success: true, message: `Page scrollée ${direction}` };
 }
 
@@ -1253,9 +1253,9 @@ function getFullPageContext() {
 // Écouter les demandes du sidepanel ou background
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Alcentric CS] Message received:', message.type, message);
-  
+
   // === SYNCHRONISATION HISTORIQUE ===
-  
+
   if (message.type === 'CHAT_HISTORY_UPDATED') {
     // Mise à jour de l'historique depuis le sidepanel
     if (message.messages) {
@@ -1267,16 +1267,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true;
   }
-  
+
   if (message.type === 'CHAT_RESET') {
     // Réinitialisation depuis le sidepanel
     conversationHistory = [];
     console.log('[Alcentric Voice] Historique réinitialisé');
     return true;
   }
-  
+
   // === CONTEXTE DE PAGE ===
-  
+
   if (message.type === 'GET_PAGE_CONTENT') {
     try {
       const pageContext = getFullPageContext();
@@ -1286,51 +1286,51 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true;
   }
-  
+
   if (message.type === 'GET_SELECTED_TEXT') {
     const selectedText = window.getSelection()?.toString() || '';
     sendResponse({ success: true, data: selectedText });
     return true;
   }
-  
+
   // ===== ACTIONS SUR LA PAGE =====
-  
+
   if (message.type === 'FILL_INPUT') {
     const result = fillInput(message.selector, message.value);
     sendResponse(result);
     return true;
   }
-  
+
   if (message.type === 'FILL_MULTIPLE_INPUTS') {
     const result = fillMultipleInputs(message.fields);
     sendResponse(result);
     return true;
   }
-  
+
   if (message.type === 'CLICK_ELEMENT') {
     const result = clickElement(message.selector);
     sendResponse(result);
     return true;
   }
-  
+
   if (message.type === 'SUBMIT_FORM') {
     const result = submitForm(message.formSelector);
     sendResponse(result);
     return true;
   }
-  
+
   if (message.type === 'TOGGLE_CHECKBOX') {
     const result = toggleCheckbox(message.selector, message.checked);
     sendResponse(result);
     return true;
   }
-  
+
   if (message.type === 'SCROLL_PAGE') {
     const result = scrollPage(message.direction, message.amount);
     sendResponse(result);
     return true;
   }
-  
+
   if (message.type === 'GET_FORM_FIELDS') {
     const fields = getFormFields();
     sendResponse({ success: true, data: fields });
@@ -1342,9 +1342,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 window.addEventListener('alcentric-auth-change', (event) => {
   const { isLoggedIn } = event.detail;
   // Notifier le background script qui relayera au side panel
-  chrome.runtime.sendMessage({ 
-    type: 'AUTH_STATE_CHANGED', 
-    isLoggedIn 
+  chrome.runtime.sendMessage({
+    type: 'AUTH_STATE_CHANGED',
+    isLoggedIn
   });
 });
 

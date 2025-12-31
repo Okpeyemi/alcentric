@@ -23,23 +23,23 @@ export default function LandingPage() {
         <section className="py-24 px-4 text-center space-y-8">
           <div className="space-y-4">
             <h1 className="text-4xl md:text-7xl font-bold tracking-tighter">
-              Créez plus vite avec <span className="underline decoration-4 decoration-primary">Alcentric</span>
+              Create faster with <span className="underline decoration-4 decoration-primary">Alcentric</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              L&apos;outil ultime pour booster votre productivité. Installez-le dès maintenant et prenez le contrôle de votre flux de travail.
+              The ultimate tool to boost your productivity. Install it now and take control of your workflow.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
             <Link href="#installation">
               <Button size="lg" className="gap-2 w-full sm:w-auto">
                 <Terminal className="w-4 h-4" />
-                Installer le projet
+                Install Project
               </Button>
             </Link>
             <Link href="#extension">
               <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto">
                 <Chrome className="w-4 h-4" />
-                Extension Chrome
+                Chrome Extension
               </Button>
             </Link>
           </div>
@@ -50,7 +50,7 @@ export default function LandingPage() {
           <div className="container mx-auto max-w-3xl space-y-12">
             <div className="text-center space-y-4">
               <h2 className="text-3xl font-bold tracking-tight">Installation</h2>
-              <p className="text-muted-foreground text-lg">Commencez par cloner le dépôt depuis GitHub</p>
+              <p className="text-muted-foreground text-lg">Start by cloning the repository from GitHub</p>
             </div>
 
             <div className="bg-zinc-950 text-zinc-50 p-6 rounded-xl font-mono text-sm shadow-2xl overflow-hidden">
@@ -88,8 +88,8 @@ export default function LandingPage() {
         <section id="extension" className="py-24 px-4">
           <div className="container mx-auto max-w-5xl space-y-12">
             <div className="text-center space-y-4">
-              <h2 className="text-3xl font-bold tracking-tight">Extension Chrome</h2>
-              <p className="text-muted-foreground text-lg">Chargez l&apos;extension en local pour le développement</p>
+              <h2 className="text-3xl font-bold tracking-tight">Chrome Extension</h2>
+              <p className="text-muted-foreground text-lg">Load the extension locally for development</p>
             </div>
 
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
@@ -97,9 +97,9 @@ export default function LandingPage() {
                 <div className="absolute -top-4 left-6 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
                   1
                 </div>
-                <h3 className="font-bold text-xl mt-2 mb-2">Accéder</h3>
+                <h3 className="font-bold text-xl mt-2 mb-2">Access</h3>
                 <p className="text-muted-foreground text-sm">
-                  Ouvrez Chrome et allez sur <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">chrome://extensions</code>
+                  Open Chrome and go to <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">chrome://extensions</code>
                 </p>
               </div>
 
@@ -107,9 +107,9 @@ export default function LandingPage() {
                 <div className="absolute -top-4 left-6 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
                   2
                 </div>
-                <h3 className="font-bold text-xl mt-2 mb-2">Activer</h3>
+                <h3 className="font-bold text-xl mt-2 mb-2">Enable</h3>
                 <p className="text-muted-foreground text-sm">
-                  Activez le commutateur <strong>&quot;Mode développeur&quot;</strong> en haut à droite.
+                  Toggle <strong>&quot;Developer mode&quot;</strong> in the top right corner.
                 </p>
               </div>
 
@@ -117,9 +117,9 @@ export default function LandingPage() {
                 <div className="absolute -top-4 left-6 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
                   3
                 </div>
-                <h3 className="font-bold text-xl mt-2 mb-2">Charger</h3>
+                <h3 className="font-bold text-xl mt-2 mb-2">Load</h3>
                 <p className="text-muted-foreground text-sm">
-                  Cliquez sur le bouton <strong>&quot;Charger l&apos;extension non empaquetée&quot;</strong>.
+                  Click on the <strong>&quot;Load unpacked&quot;</strong> button.
                 </p>
               </div>
 
@@ -127,9 +127,9 @@ export default function LandingPage() {
                 <div className="absolute -top-4 left-6 h-8 w-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
                   4
                 </div>
-                <h3 className="font-bold text-xl mt-2 mb-2">Sélectionner</h3>
+                <h3 className="font-bold text-xl mt-2 mb-2">Select</h3>
                 <p className="text-muted-foreground text-sm">
-                  Choisissez le dossier <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">extension</code> à la racine du projet.
+                  Select the <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">extension</code> folder at the root of the project.
                 </p>
               </div>
             </div>
@@ -143,7 +143,7 @@ export default function LandingPage() {
             Alcentric
           </div>
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Alcentric. Tous droits réservés.
+            &copy; {new Date().getFullYear()} Alcentric. All rights reserved.
           </p>
         </div>
       </footer>
