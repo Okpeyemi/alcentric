@@ -9,6 +9,74 @@ let currentUser = null;
 let sessionCheckTimer = null;
 let currentPageContext = null; // Contexte de la page actuelle
 
+// === SYNCHRONISATION HISTORIQUE CHAT ===
+
+// Sauvegarder l'historique dans le stockage partagé
+async function saveSharedHistory() {
+  try {
+    await chrome.storage.local.set({ 
+      sharedChatHistory: chatMessages,
+      lastUpdatedBy: 'sidepanel',
+      lastUpdatedAt: Date.now()
+    });
+    // Notifier le content script
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { 
+          type: 'CHAT_HISTORY_UPDATED',
+          messages: chatMessages
+        }).catch(() => {}); // Ignorer si le content script n'est pas prêt
+      }
+    });
+  } catch (e) {
+    console.error('[Sidepanel] Erreur sauvegarde historique:', e);
+  }
+}
+
+// Charger l'historique depuis le stockage partagé
+async function loadSharedHistory() {
+  try {
+    const result = await chrome.storage.local.get(['sharedChatHistory']);
+    if (result.sharedChatHistory && result.sharedChatHistory.length > 0) {
+      chatMessages = result.sharedChatHistory;
+      renderChatHistory();
+    }
+  } catch (e) {
+    console.error('[Sidepanel] Erreur chargement historique:', e);
+  }
+}
+
+// Afficher l'historique dans le DOM
+function renderChatHistory() {
+  // Garder le message de bienvenue s'il n'y a pas d'historique
+  if (chatMessages.length === 0) {
+    chatMessagesEl.innerHTML = `<div class="message assistant"><div class="message-avatar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div><div class="message-content"><p>Bonjour ! Je suis Alcentric, votre assistant IA. Comment puis-je vous aider ?</p></div></div>`;
+    return;
+  }
+  
+  // Reconstruire l'affichage
+  chatMessagesEl.innerHTML = '';
+  chatMessages.forEach(msg => {
+    chatMessagesEl.appendChild(createMessageElement(msg.role, msg.content, msg.source));
+  });
+  scrollToBottom();
+}
+
+// Écouter les mises à jour depuis le content script (chat vocal)
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'VOICE_CHAT_MESSAGE') {
+    // Ajouter les messages du chat vocal
+    if (message.userMessage) {
+      chatMessages.push({ role: 'user', content: message.userMessage, source: 'voice' });
+    }
+    if (message.assistantMessage) {
+      chatMessages.push({ role: 'assistant', content: message.assistantMessage, source: 'voice' });
+    }
+    renderChatHistory();
+    saveSharedHistory();
+  }
+});
+
 // Éléments DOM
 const loadingEl = document.getElementById('loading');
 const loginPromptEl = document.getElementById('login-prompt');
@@ -60,12 +128,22 @@ function scrollToBottom() {
   chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 }
 
-function createMessageElement(role, content) {
+function createMessageElement(role, content, source = 'text') {
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${role}`;
-  const avatarSvg = role === 'assistant' 
-    ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`
-    : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`;
+  
+  // Icône selon le rôle et la source
+  let avatarSvg;
+  if (source === 'voice') {
+    // Icône micro pour les messages vocaux
+    avatarSvg = role === 'assistant'
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
+  } else {
+    avatarSvg = role === 'assistant' 
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`;
+  }
   
   // Utiliser Markdown pour les messages assistant, escapeHtml pour les messages utilisateur
   const formattedContent = role === 'assistant' ? parseMarkdown(content) : `<p>${escapeHtml(content)}</p>`;
@@ -435,6 +513,9 @@ async function sendMessage(content) {
     scrollToBottom();
   }
   
+  // Sauvegarder l'historique après chaque échange
+  saveSharedHistory();
+  
   isStreaming = false;
   sendBtn.disabled = false;
   chatInput.disabled = false;
@@ -445,6 +526,14 @@ async function sendMessage(content) {
 function resetChat() {
   chatMessages = [];
   chatMessagesEl.innerHTML = `<div class="message assistant"><div class="message-avatar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div><div class="message-content"><p>Bonjour ! Je suis Alcentric, votre assistant IA. Comment puis-je vous aider ?</p></div></div>`;
+  // Vider aussi le stockage partagé
+  saveSharedHistory();
+  // Notifier le content script de la réinitialisation
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, { type: 'CHAT_RESET' }).catch(() => {});
+    }
+  });
 }
 
 function updateSendButton() {
@@ -501,6 +590,8 @@ async function checkAuth() {
     userEmailEl.textContent = user.email;
     showState('logged-in');
     startSessionCheck();
+    // Charger l'historique partagé (chat texte + vocal)
+    loadSharedHistory();
   } else {
     currentUser = null;
     showState('login');

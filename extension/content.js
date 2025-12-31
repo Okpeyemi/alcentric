@@ -8,6 +8,33 @@ let voiceConversation = null;
 // Configuration API
 const API_BASE_URL = 'http://localhost:3000';
 
+// === SYNCHRONISATION HISTORIQUE CHAT ===
+
+// Charger l'historique partagé depuis le stockage
+async function loadSharedVoiceHistory() {
+  try {
+    const result = await chrome.storage.local.get(['sharedChatHistory']);
+    if (result.sharedChatHistory && result.sharedChatHistory.length > 0) {
+      conversationHistory = result.sharedChatHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      console.log('[Alcentric Voice] Historique chargé:', conversationHistory.length, 'messages');
+    }
+  } catch (e) {
+    console.error('[Alcentric Voice] Erreur chargement historique:', e);
+  }
+}
+
+// Notifier le sidepanel d'un nouveau message vocal
+function notifyVoiceMessage(userMessage, assistantMessage) {
+  chrome.runtime.sendMessage({
+    type: 'VOICE_CHAT_MESSAGE',
+    userMessage,
+    assistantMessage
+  }).catch(() => {}); // Ignorer si le sidepanel n'est pas ouvert
+}
+
 // Créer le bouton flottant
 function createButton() {
   if (alcentricButton) return;
@@ -208,12 +235,21 @@ async function openVoiceModal() {
   const pageTitle = document.title || window.location.hostname;
   document.getElementById('alcentric-context-info').textContent = `Contexte : ${pageTitle.substring(0, 50)}${pageTitle.length > 50 ? '...' : ''}`;
   
-  // Réinitialiser l'historique de conversation vocale
-  conversationHistory = [];
-  document.getElementById('alcentric-voice-transcript').innerHTML = 
-    '<p class="assistant">Bonjour ! Comment puis-je vous aider avec cette page ?</p>';
+  // Charger l'historique partagé (synchronisé avec le chat texte)
+  await loadSharedVoiceHistory();
   
-  // Initialiser la conversation vocale avec ElevenLabs
+  // Afficher l'historique existant dans la transcription
+  const transcriptEl = document.getElementById('alcentric-voice-transcript');
+  if (conversationHistory.length > 0) {
+    transcriptEl.innerHTML = conversationHistory.map(msg => 
+      `<p class="${msg.role}">${msg.content}</p>`
+    ).join('');
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  } else {
+    transcriptEl.innerHTML = '<p class="assistant">Bonjour ! Comment puis-je vous aider avec cette page ?</p>';
+  }
+  
+  // Initialiser la conversation vocale
   await initVoiceConversation();
 }
 
@@ -461,6 +497,9 @@ async function processVoiceText(text) {
       // Afficher et jouer la réponse
       addTranscript('assistant', result.assistantText);
       conversationHistory.push({ role: 'assistant', content: result.assistantText });
+      
+      // Synchroniser avec le sidepanel
+      notifyVoiceMessage(text, result.assistantText);
       
       // Jouer l'audio de réponse
       if (result.audioResponse) {
@@ -1153,6 +1192,29 @@ function getFullPageContext() {
 // Écouter les demandes du sidepanel ou background
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Alcentric CS] Message received:', message.type, message);
+  
+  // === SYNCHRONISATION HISTORIQUE ===
+  
+  if (message.type === 'CHAT_HISTORY_UPDATED') {
+    // Mise à jour de l'historique depuis le sidepanel
+    if (message.messages) {
+      conversationHistory = message.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      console.log('[Alcentric Voice] Historique synchronisé:', conversationHistory.length, 'messages');
+    }
+    return true;
+  }
+  
+  if (message.type === 'CHAT_RESET') {
+    // Réinitialisation depuis le sidepanel
+    conversationHistory = [];
+    console.log('[Alcentric Voice] Historique réinitialisé');
+    return true;
+  }
+  
+  // === CONTEXTE DE PAGE ===
   
   if (message.type === 'GET_PAGE_CONTENT') {
     try {
