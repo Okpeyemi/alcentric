@@ -1,6 +1,12 @@
 // Content script pour injecter le bouton Alcentric sur toutes les pages
 
 let alcentricButton = null;
+let alcentricMenu = null;
+let alcentricVoiceModal = null;
+let voiceConversation = null;
+
+// Configuration API
+const API_BASE_URL = 'http://localhost:3000';
 
 // Créer le bouton flottant
 function createButton() {
@@ -18,6 +24,151 @@ function createButton() {
   
   alcentricButton.addEventListener('click', handleButtonClick);
   document.body.appendChild(alcentricButton);
+  
+  // Créer le menu de sélection
+  createSelectionMenu();
+  
+  // Créer la modale vocale
+  createVoiceModal();
+}
+
+// Créer le menu de sélection (chat texte ou vocal)
+function createSelectionMenu() {
+  if (alcentricMenu) return;
+  
+  alcentricMenu = document.createElement('div');
+  alcentricMenu.id = 'alcentric-menu';
+  alcentricMenu.innerHTML = `
+    <div class="alcentric-menu-item" data-mode="chat">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>Chat texte</span>
+    </div>
+    <div class="alcentric-menu-item" data-mode="voice">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" x2="12" y1="19" y2="22"/>
+      </svg>
+      <span>Discussion vocale</span>
+    </div>
+  `;
+  
+  // Event listeners pour les options du menu
+  alcentricMenu.querySelectorAll('.alcentric-menu-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const mode = item.dataset.mode;
+      hideMenu();
+      
+      if (mode === 'chat') {
+        chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
+      } else if (mode === 'voice') {
+        openVoiceModal();
+      }
+    });
+  });
+  
+  document.body.appendChild(alcentricMenu);
+  
+  // Fermer le menu si on clique ailleurs
+  document.addEventListener('click', (e) => {
+    if (!alcentricMenu.contains(e.target) && e.target !== alcentricButton) {
+      hideMenu();
+    }
+  });
+}
+
+// Créer la modale de conversation vocale
+function createVoiceModal() {
+  if (alcentricVoiceModal) return;
+  
+  alcentricVoiceModal = document.createElement('div');
+  alcentricVoiceModal.id = 'alcentric-voice-modal';
+  alcentricVoiceModal.innerHTML = `
+    <div class="alcentric-voice-container">
+      <div class="alcentric-voice-header">
+        <div class="alcentric-voice-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+            <path d="M2 12h20"/>
+          </svg>
+          Alcentric Voice
+        </div>
+        <button class="alcentric-voice-close" id="alcentric-voice-close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="alcentric-voice-visualizer" id="alcentric-voice-visualizer">
+        <div class="alcentric-voice-circle outer"></div>
+        <div class="alcentric-voice-circle middle"></div>
+        <div class="alcentric-voice-circle inner">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="alcentric-voice-status" id="alcentric-voice-status">
+        Cliquez pour parler
+      </div>
+      
+      <div class="alcentric-voice-transcript" id="alcentric-voice-transcript">
+        <p class="assistant">Bonjour ! Comment puis-je vous aider avec cette page ?</p>
+      </div>
+      
+      <button class="alcentric-voice-btn" id="alcentric-voice-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" x2="12" y1="19" y2="22"/>
+        </svg>
+      </button>
+      
+      <div class="alcentric-voice-context" id="alcentric-voice-context">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span id="alcentric-context-info">Contexte de la page chargé</span>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(alcentricVoiceModal);
+  
+  // Event listeners
+  document.getElementById('alcentric-voice-close').addEventListener('click', closeVoiceModal);
+  document.getElementById('alcentric-voice-btn').addEventListener('click', toggleVoiceRecording);
+  
+  // Fermer avec Echap
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && alcentricVoiceModal.classList.contains('show')) {
+      closeVoiceModal();
+    }
+  });
+}
+
+// Afficher/masquer le menu
+function showMenu() {
+  alcentricMenu?.classList.add('show');
+}
+
+function hideMenu() {
+  alcentricMenu?.classList.remove('show');
+}
+
+function toggleMenu() {
+  alcentricMenu?.classList.toggle('show');
 }
 
 // Supprimer le bouton
@@ -26,11 +177,269 @@ function removeButton() {
     alcentricButton.remove();
     alcentricButton = null;
   }
+  if (alcentricMenu) {
+    alcentricMenu.remove();
+    alcentricMenu = null;
+  }
+  if (alcentricVoiceModal) {
+    alcentricVoiceModal.remove();
+    alcentricVoiceModal = null;
+  }
 }
 
-// Gérer le clic sur le bouton - ouvre le Side Panel
-function handleButtonClick() {
-  chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
+// Gérer le clic sur le bouton - affiche le menu
+function handleButtonClick(e) {
+  e.stopPropagation();
+  toggleMenu();
+}
+
+// ==================== GESTION VOCALE ====================
+
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let conversationHistory = [];
+
+// Ouvrir la modale vocale
+async function openVoiceModal() {
+  alcentricVoiceModal?.classList.add('show');
+  
+  // Mettre à jour le contexte affiché
+  const pageTitle = document.title || window.location.hostname;
+  document.getElementById('alcentric-context-info').textContent = `Contexte : ${pageTitle.substring(0, 50)}${pageTitle.length > 50 ? '...' : ''}`;
+  
+  // Réinitialiser l'historique de conversation vocale
+  conversationHistory = [];
+  document.getElementById('alcentric-voice-transcript').innerHTML = 
+    '<p class="assistant">Bonjour ! Comment puis-je vous aider avec cette page ?</p>';
+  
+  // Initialiser la conversation vocale avec ElevenLabs
+  await initVoiceConversation();
+}
+
+// Fermer la modale vocale
+function closeVoiceModal() {
+  alcentricVoiceModal?.classList.remove('show');
+  stopRecording();
+  
+  // Déconnecter ElevenLabs si connecté
+  if (voiceConversation) {
+    voiceConversation.close();
+    voiceConversation = null;
+  }
+}
+
+// Variables pour la reconnaissance vocale
+let recognition = null;
+
+// Initialiser la conversation vocale
+async function initVoiceConversation() {
+  try {
+    updateVoiceStatus('Initialisation...');
+    
+    // Vérifier si la Web Speech API est disponible
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      updateVoiceStatus('Erreur : reconnaissance vocale non supportée');
+      return;
+    }
+    
+    // Initialiser la reconnaissance vocale
+    recognition = new SpeechRecognition();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    recognition.onresult = async (event) => {
+      const transcript = event.results[0][0].transcript;
+      console.log('[Alcentric Voice] Transcription:', transcript);
+      isRecording = false;
+      document.getElementById('alcentric-voice-btn').classList.remove('recording');
+      document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
+      await processVoiceText(transcript);
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('[Alcentric Voice] Erreur reconnaissance:', event.error);
+      isRecording = false;
+      document.getElementById('alcentric-voice-btn').classList.remove('recording');
+      document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
+      
+      if (event.error === 'no-speech') {
+        updateVoiceStatus('Aucune parole détectée. Réessayez.');
+      } else if (event.error === 'not-allowed') {
+        updateVoiceStatus('Erreur : accès au microphone refusé');
+      } else {
+        updateVoiceStatus('Erreur : ' + event.error);
+      }
+    };
+    
+    recognition.onend = () => {
+      if (isRecording) {
+        isRecording = false;
+        document.getElementById('alcentric-voice-btn').classList.remove('recording');
+        document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
+      }
+    };
+    
+    updateVoiceStatus('Cliquez pour parler');
+  } catch (error) {
+    console.error('[Alcentric Voice] Erreur init:', error);
+    updateVoiceStatus('Erreur : ' + error.message);
+  }
+}
+
+// Toggle enregistrement vocal
+async function toggleVoiceRecording() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+// Démarrer l'enregistrement (utilise Web Speech API)
+function startRecording() {
+  if (!recognition) {
+    updateVoiceStatus('Erreur : reconnaissance vocale non initialisée');
+    return;
+  }
+  
+  try {
+    recognition.start();
+    isRecording = true;
+    
+    // UI updates
+    document.getElementById('alcentric-voice-btn').classList.add('recording');
+    document.getElementById('alcentric-voice-visualizer').classList.add('listening');
+    updateVoiceStatus('Écoute en cours... Parlez maintenant');
+    
+  } catch (error) {
+    console.error('[Alcentric Voice] Erreur démarrage:', error);
+    updateVoiceStatus('Erreur : ' + error.message);
+  }
+}
+
+// Arrêter l'enregistrement
+function stopRecording() {
+  if (recognition && isRecording) {
+    recognition.stop();
+    isRecording = false;
+    
+    document.getElementById('alcentric-voice-btn').classList.remove('recording');
+    document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
+    updateVoiceStatus('Traitement...');
+  }
+}
+
+// Traiter le texte transcrit et obtenir la réponse IA
+async function processVoiceText(text) {
+  try {
+    updateVoiceStatus('Génération de la réponse...');
+    
+    // Afficher la transcription utilisateur
+    addTranscript('user', text);
+    conversationHistory.push({ role: 'user', content: text });
+    
+    // Envoyer le texte au serveur pour la réponse IA + TTS
+    const response = await fetch(`${API_BASE_URL}/api/voice-chat-simple`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        conversationHistory: conversationHistory.slice(-10), // Garder les 10 derniers messages
+        context: {
+          pageContext: {
+            metadata: extractPageMetadata(),
+            content: extractPageContent()
+          }
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erreur serveur: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Afficher et jouer la réponse
+      addTranscript('assistant', result.assistantText);
+      conversationHistory.push({ role: 'assistant', content: result.assistantText });
+      
+      // Jouer l'audio de réponse
+      if (result.audioResponse) {
+        await playAudioResponse(result.audioResponse);
+      }
+      
+      updateVoiceStatus('Cliquez pour parler');
+    } else {
+      throw new Error(result.error || 'Erreur inconnue');
+    }
+    
+  } catch (error) {
+    console.error('[Alcentric Voice] Erreur traitement:', error);
+    updateVoiceStatus('Erreur : ' + error.message);
+    addTranscript('assistant', 'Désolé, une erreur s\'est produite. Réessayez.');
+  }
+}
+
+// Jouer la réponse audio
+async function playAudioResponse(base64Audio) {
+  return new Promise((resolve, reject) => {
+    try {
+      updateVoiceStatus('Réponse en cours...');
+      document.getElementById('alcentric-voice-visualizer').classList.add('speaking');
+      
+      const audio = new Audio(`data:audio/mpeg;base64,${base64Audio}`);
+      
+      audio.onended = () => {
+        document.getElementById('alcentric-voice-visualizer').classList.remove('speaking');
+        updateVoiceStatus('Cliquez pour parler');
+        resolve();
+      };
+      
+      audio.onerror = (e) => {
+        document.getElementById('alcentric-voice-visualizer').classList.remove('speaking');
+        reject(e);
+      };
+      
+      audio.play();
+    } catch (error) {
+      document.getElementById('alcentric-voice-visualizer').classList.remove('speaking');
+      reject(error);
+    }
+  });
+}
+
+// Utilitaires
+function updateVoiceStatus(text) {
+  const statusEl = document.getElementById('alcentric-voice-status');
+  if (statusEl) statusEl.textContent = text;
+}
+
+function addTranscript(role, text) {
+  const transcriptEl = document.getElementById('alcentric-voice-transcript');
+  if (transcriptEl) {
+    const p = document.createElement('p');
+    p.className = role;
+    p.textContent = text;
+    transcriptEl.appendChild(p);
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 // Extraire le contenu textuel de la page de manière intelligente
