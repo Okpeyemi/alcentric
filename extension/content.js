@@ -231,6 +231,10 @@ function closeVoiceModal() {
 
 // Variables pour la reconnaissance vocale
 let recognition = null;
+let silenceTimer = null;
+let currentTranscript = '';
+let isProcessing = false;
+const SILENCE_TIMEOUT = 1500; // 1.5 secondes de silence = fin de parole
 
 // Initialiser la conversation vocale
 async function initVoiceConversation() {
@@ -247,23 +251,59 @@ async function initVoiceConversation() {
     // Initialiser la reconnaissance vocale
     recognition = new SpeechRecognition();
     recognition.lang = 'fr-FR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;       // Écoute continue
+    recognition.interimResults = true;   // Résultats intermédiaires pour feedback temps réel
+    recognition.maxAlternatives = 1;
     
-    recognition.onresult = async (event) => {
-      const transcript = event.results[0][0].transcript;
-      console.log('[Alcentric Voice] Transcription:', transcript);
-      isRecording = false;
-      document.getElementById('alcentric-voice-btn').classList.remove('recording');
-      document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
-      await processVoiceText(transcript);
+    recognition.onresult = (event) => {
+      // Ne pas traiter si on est déjà en train de traiter une réponse
+      if (isProcessing) return;
+      
+      // Récupérer la transcription (finale ou intermédiaire)
+      let interimTranscript = '';
+      let finalTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          interimTranscript += result[0].transcript;
+        }
+      }
+      
+      // Mettre à jour la transcription courante
+      if (finalTranscript) {
+        currentTranscript += finalTranscript;
+      }
+      
+      // Afficher le feedback en temps réel
+      const displayText = currentTranscript + interimTranscript;
+      if (displayText.trim()) {
+        updateVoiceStatus('🎤 ' + displayText.substring(0, 50) + (displayText.length > 50 ? '...' : ''));
+      }
+      
+      // Réinitialiser le timer de silence à chaque nouveau résultat
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        // Silence détecté - l'utilisateur a fini de parler
+        if (currentTranscript.trim() && !isProcessing) {
+          finishRecording();
+        }
+      }, SILENCE_TIMEOUT);
     };
     
     recognition.onerror = (event) => {
       console.error('[Alcentric Voice] Erreur reconnaissance:', event.error);
+      
+      // Ignorer l'erreur 'aborted' car on l'utilise pour arrêter proprement
+      if (event.error === 'aborted') return;
+      
+      clearTimeout(silenceTimer);
       isRecording = false;
-      document.getElementById('alcentric-voice-btn').classList.remove('recording');
-      document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
+      isProcessing = false;
+      document.getElementById('alcentric-voice-btn')?.classList.remove('recording');
+      document.getElementById('alcentric-voice-visualizer')?.classList.remove('listening');
       
       if (event.error === 'no-speech') {
         updateVoiceStatus('Aucune parole détectée. Réessayez.');
@@ -275,10 +315,13 @@ async function initVoiceConversation() {
     };
     
     recognition.onend = () => {
-      if (isRecording) {
-        isRecording = false;
-        document.getElementById('alcentric-voice-btn').classList.remove('recording');
-        document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
+      // Si on enregistre encore et qu'on n'a pas de transcription, relancer
+      if (isRecording && !isProcessing && !currentTranscript.trim()) {
+        try {
+          recognition.start();
+        } catch (e) {
+          // Ignorer si déjà démarré
+        }
       }
     };
     
@@ -287,6 +330,33 @@ async function initVoiceConversation() {
     console.error('[Alcentric Voice] Erreur init:', error);
     updateVoiceStatus('Erreur : ' + error.message);
   }
+}
+
+// Terminer l'enregistrement et traiter la transcription
+async function finishRecording() {
+  if (isProcessing || !currentTranscript.trim()) return;
+  
+  isProcessing = true;
+  clearTimeout(silenceTimer);
+  
+  // Arrêter la reconnaissance
+  try {
+    recognition.stop();
+  } catch (e) {}
+  
+  isRecording = false;
+  document.getElementById('alcentric-voice-btn')?.classList.remove('recording');
+  document.getElementById('alcentric-voice-visualizer')?.classList.remove('listening');
+  
+  const transcript = currentTranscript.trim();
+  currentTranscript = ''; // Réinitialiser pour le prochain tour
+  
+  console.log('[Alcentric Voice] Transcription finale:', transcript);
+  
+  // Traiter le texte
+  await processVoiceText(transcript);
+  
+  isProcessing = false;
 }
 
 // Toggle enregistrement vocal
@@ -305,30 +375,53 @@ function startRecording() {
     return;
   }
   
+  if (isProcessing) {
+    updateVoiceStatus('Traitement en cours, patientez...');
+    return;
+  }
+  
   try {
+    // Réinitialiser l'état
+    currentTranscript = '';
+    clearTimeout(silenceTimer);
+    
     recognition.start();
     isRecording = true;
     
     // UI updates
-    document.getElementById('alcentric-voice-btn').classList.add('recording');
-    document.getElementById('alcentric-voice-visualizer').classList.add('listening');
+    document.getElementById('alcentric-voice-btn')?.classList.add('recording');
+    document.getElementById('alcentric-voice-visualizer')?.classList.add('listening');
     updateVoiceStatus('Écoute en cours... Parlez maintenant');
     
   } catch (error) {
     console.error('[Alcentric Voice] Erreur démarrage:', error);
-    updateVoiceStatus('Erreur : ' + error.message);
+    // Si déjà en cours, ignorer
+    if (error.message?.includes('already started')) {
+      isRecording = true;
+    } else {
+      updateVoiceStatus('Erreur : ' + error.message);
+    }
   }
 }
 
-// Arrêter l'enregistrement
+// Arrêter l'enregistrement manuellement (bouton)
 function stopRecording() {
+  clearTimeout(silenceTimer);
+  
   if (recognition && isRecording) {
-    recognition.stop();
-    isRecording = false;
-    
-    document.getElementById('alcentric-voice-btn').classList.remove('recording');
-    document.getElementById('alcentric-voice-visualizer').classList.remove('listening');
-    updateVoiceStatus('Traitement...');
+    // Si on a du texte, le traiter
+    if (currentTranscript.trim() && !isProcessing) {
+      finishRecording();
+    } else {
+      // Sinon juste arrêter
+      try {
+        recognition.stop();
+      } catch (e) {}
+      isRecording = false;
+      document.getElementById('alcentric-voice-btn')?.classList.remove('recording');
+      document.getElementById('alcentric-voice-visualizer')?.classList.remove('listening');
+      updateVoiceStatus('Cliquez pour parler');
+    }
   }
 }
 
