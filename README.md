@@ -148,6 +148,18 @@ pnpm lint         # Vérification ESLint
 - L'extension utilise des permissions minimales
 - ~~L'authentification Supabase~~ (désactivée pour le moment)
 
+## ⚠️ Note importante sur le fichier `.env`
+
+> **Exception volontaire pour les tests**
+
+Pour faciliter les tests et permettre une prise en main rapide du projet, le fichier **`.env` a été volontairement inclus dans ce dépôt GitHub**.
+
+⚠️ **Important** :
+- Les clés présentes sont **exclusivement destinées à des tests**
+- Elles peuvent être **révoquées ou modifiées à tout moment**
+- **Ne pas utiliser ces clés en production**
+
+
 ## Contribution
 
 Les contributions sont les bienvenues ! 
