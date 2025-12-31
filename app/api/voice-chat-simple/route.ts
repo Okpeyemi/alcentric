@@ -5,12 +5,64 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || 'sk_cd87bf204aaea78b5c7b60a4987d41b0af06c35d2b72f5ba'
 const ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM' // Rachel - voix par défaut
 
-// Configuration Google AI - utiliser une clé API Gemini
+// Configuration Google AI
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || ''
 
 // Initialiser Google Generative AI
 const genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY)
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+// Interface pour le contexte de page (identique au chat principal)
+interface PageContext {
+  metadata?: {
+    url: string
+    title: string
+    description: string
+    keywords: string
+    language: string
+    domain: string
+  }
+  content?: string
+  formFields?: Array<{
+    index: number
+    type: string
+    label: string
+    id?: string
+    name?: string
+    placeholder?: string
+  }>
+  images?: Array<{
+    alt: string
+    src: string
+    type?: string
+  }>
+  videos?: Array<{
+    type: string
+    src?: string
+    videoId?: string
+  }>
+  pdfInfo?: {
+    isPdfPage: boolean
+    numPages?: number
+    extractedPages?: number
+    textLength?: number
+    extractionFailed?: boolean
+    error?: string
+    metadata?: {
+      title?: string
+      author?: string
+      subject?: string
+    }
+  }
+  mediaLinks?: {
+    documents: Array<{ type: string; href: string; text: string }>
+  }
+}
+
+interface RequestContext {
+  pageContext?: PageContext
+  selectedText?: string
+}
 
 // Synthèse vocale avec ElevenLabs
 async function textToSpeech(text: string): Promise<string> {
@@ -47,37 +99,152 @@ async function textToSpeech(text: string): Promise<string> {
   }
 }
 
+// Construire l'instruction système avec le contexte complet de la page
+function buildSystemInstruction(context?: RequestContext): string {
+  const isPdf = context?.pageContext?.pdfInfo?.isPdfPage === true
+  
+  let instruction = `Tu es Alcentric, un assistant IA VOCAL intelligent et sympathique.
+
+RÈGLES IMPORTANTES POUR LE MODE VOCAL:
+- Réponds de manière NATURELLE et CONVERSATIONNELLE, comme dans une vraie discussion orale
+- Tes réponses doivent être CONCISES et adaptées à l'oral (2-4 phrases pour les questions simples)
+- Pour les résumés ou analyses, tu peux être plus détaillé mais reste fluide
+- ÉVITE les listes à puces, numéros et formatage Markdown - parle naturellement
+- N'utilise PAS d'émojis ni de caractères spéciaux
+- Réponds toujours en français
+
+MISSION:
+Tu es un assistant contextuel. Par défaut, tu prends en compte la page web sur laquelle l'utilisateur se trouve.
+`
+
+  // Instructions spéciales pour les PDFs
+  if (isPdf) {
+    instruction += `
+DOCUMENT PDF DÉTECTÉ:
+Tu analyses actuellement un document PDF. Quand on te demande de résumer ou expliquer :
+- Fournis un résumé DÉTAILLÉ et SUBSTANTIEL, pas juste les titres
+- Explique le CONTENU de chaque section
+- Mentionne les points clés, données importantes, conclusions
+- Adapte ta réponse pour l'oral (pas de listes, phrases fluides)
+`
+  }
+
+  instruction += `
+CAPACITÉS:
+- Analyse de contenu textuel de pages web
+- Lecture et résumé de documents PDF
+- Analyse d'images (descriptions)
+- Information sur les vidéos présentes
+- Aide sur les formulaires
+`
+
+  // Ajouter le contexte de la page
+  if (context?.pageContext?.metadata) {
+    instruction += `
+═══ PAGE ACTUELLE ═══
+URL: ${context.pageContext.metadata.url}
+Titre: ${context.pageContext.metadata.title}
+`
+    if (context.pageContext.metadata.description) {
+      instruction += `Description: ${context.pageContext.metadata.description}\n`
+    }
+  }
+
+  // Ajouter le contenu de la page (plus de contenu pour les PDFs)
+  if (context?.pageContext?.content) {
+    const maxLength = isPdf ? 30000 : 8000
+    const contentPreview = context.pageContext.content.substring(0, maxLength)
+    
+    if (isPdf) {
+      instruction += `
+═══ CONTENU DU DOCUMENT PDF ═══
+${contentPreview}${context.pageContext.content.length > maxLength ? '\n[...document tronqué...]' : ''}
+═══ FIN DU CONTENU PDF ═══
+`
+    } else {
+      instruction += `
+CONTENU DE LA PAGE:
+${contentPreview}${context.pageContext.content.length > maxLength ? '\n[...contenu tronqué...]' : ''}
+`
+    }
+  }
+
+  // Ajouter les informations PDF
+  if (context?.pageContext?.pdfInfo?.isPdfPage) {
+    const pdf = context.pageContext.pdfInfo
+    instruction += `
+INFO PDF: ${pdf.numPages || '?'} pages`
+    if (pdf.metadata?.title) instruction += `, Titre: ${pdf.metadata.title}`
+    if (pdf.metadata?.author) instruction += `, Auteur: ${pdf.metadata.author}`
+    instruction += '\n'
+  }
+
+  // Ajouter les champs de formulaire
+  if (context?.pageContext?.formFields && context.pageContext.formFields.length > 0) {
+    instruction += `
+FORMULAIRE DÉTECTÉ (${context.pageContext.formFields.length} champs):
+`
+    context.pageContext.formFields.slice(0, 10).forEach((field, i) => {
+      instruction += `- ${field.label || field.name || field.id || 'Champ'} [${field.type}]\n`
+    })
+  }
+
+  // Ajouter les images
+  if (context?.pageContext?.images && context.pageContext.images.length > 0) {
+    instruction += `
+IMAGES (${context.pageContext.images.length}):
+`
+    context.pageContext.images.slice(0, 5).forEach((img) => {
+      instruction += `- ${img.alt || 'Image sans description'}\n`
+    })
+  }
+
+  // Ajouter les vidéos
+  if (context?.pageContext?.videos && context.pageContext.videos.length > 0) {
+    instruction += `
+VIDÉOS (${context.pageContext.videos.length}):
+`
+    context.pageContext.videos.slice(0, 3).forEach((video) => {
+      if (video.type === 'youtube') {
+        instruction += `- YouTube: https://youtube.com/watch?v=${video.videoId}\n`
+      } else {
+        instruction += `- Vidéo ${video.type}\n`
+      }
+    })
+  }
+
+  // Ajouter les documents liés
+  if (context?.pageContext?.mediaLinks?.documents && context.pageContext.mediaLinks.documents.length > 0) {
+    instruction += `
+DOCUMENTS LIÉS:
+`
+    context.pageContext.mediaLinks.documents.slice(0, 5).forEach((doc) => {
+      instruction += `- [${doc.type.toUpperCase()}] ${doc.text || doc.href}\n`
+    })
+  }
+
+  // Texte sélectionné
+  if (context?.selectedText) {
+    instruction += `
+═══ TEXTE SÉLECTIONNÉ ═══
+"${context.selectedText.substring(0, 1000)}"
+`
+  }
+
+  return instruction
+}
+
 // Générer la réponse IA avec Gemini
 async function generateAIResponse(
   userText: string,
   conversationHistory: Array<{ role: string; content: string }>,
-  context: any
+  context?: RequestContext
 ): Promise<string> {
   try {
-    let systemPrompt = `Tu es Alcentric, un assistant IA vocal intelligent et sympathique. 
-Tu réponds de manière naturelle et conversationnelle, comme dans une vraie discussion.
-Tes réponses doivent être concises et adaptées à l'oral (2-4 phrases maximum sauf si l'utilisateur demande des détails).
-Évite les listes à puces et le formatage Markdown - parle naturellement.`
-
-    // Ajouter le contexte de la page si disponible
-    if (context?.pageContext) {
-      const pageContent = context.pageContext.content?.substring(0, 5000) || ''
-      const metadata = context.pageContext.metadata || {}
-      
-      systemPrompt += `
-
-L'utilisateur navigue actuellement sur cette page web :
-- URL: ${metadata.url || 'Non disponible'}
-- Titre: ${metadata.title || 'Non disponible'}
-
-Contenu de la page (extrait) :
-${pageContent}
-
-Tu peux répondre à des questions sur cette page et aider l'utilisateur avec son contenu.`
-    }
+    const systemInstruction = buildSystemInstruction(context)
 
     // Construire le prompt complet avec l'historique
-    let fullPrompt = systemPrompt + '\n\n'
+    let fullPrompt = systemInstruction + '\n\n'
     
     for (const msg of conversationHistory) {
       const role = msg.role === 'user' ? 'Utilisateur' : 'Assistant'

@@ -341,6 +341,9 @@ async function processVoiceText(text) {
     addTranscript('user', text);
     conversationHistory.push({ role: 'user', content: text });
     
+    // Récupérer le contexte complet de la page (inclut PDF, images, vidéos, formulaires)
+    const fullContext = getFullPageContext();
+    
     // Envoyer le texte au serveur pour la réponse IA + TTS
     const response = await fetch(`${API_BASE_URL}/api/voice-chat-simple`, {
       method: 'POST',
@@ -349,10 +352,8 @@ async function processVoiceText(text) {
         text: text,
         conversationHistory: conversationHistory.slice(-10), // Garder les 10 derniers messages
         context: {
-          pageContext: {
-            metadata: extractPageMetadata(),
-            content: extractPageContent()
-          }
+          pageContext: fullContext,
+          selectedText: window.getSelection()?.toString() || ''
         }
       })
     });
